@@ -37,7 +37,8 @@ export interface SessionState {
   liftedTapes: string[];
   focus: boolean;
   ruler: RulerState | null;
-  zoomWindow: { pageID: string; x: number; y: number } | null;
+  /** The strip of a page the zoom window shows, by its top left; its size is set by the window once it knows its own. */
+  zoomWindow: { pageID: string; x: number; y: number; w?: number; h?: number } | null;
   panel: Panel;
   /** Asks the canvas to bring a page into view. The number makes each ask new. */
   scrollTo: { pageID: string; nonce: number; rect?: { x: number; y: number; w: number; h: number } } | null;

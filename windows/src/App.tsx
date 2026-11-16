@@ -4,8 +4,29 @@ import { useEffect } from "react";
 import { Notices, StampHost, useDark } from "./design/controls";
 import { Editor } from "./editor/Editor";
 import { Library } from "./library/Library";
+import { Settings } from "./library/Settings";
+import { WritingCalendar } from "./library/WritingCalendar";
+import { invoke, isTauri } from "./platform/host";
+// Importing the lock service is what makes locked notebooks ask before they open.
+import "./services/lock";
 import * as appActions from "./state/app";
-import { documentIfOpen, loadLibrary, openToday, quickNote, saveAll, useApp } from "./state/app";
+import { documentIfOpen, loadLibrary, openSettings, openToday, quickNote, saveAll, useApp } from "./state/app";
+
+let launchHandled = false;
+
+/** What the app was started with: a jump-list entry or shortcut asking for today's page or a quick note. */
+async function honourLaunchArgs(): Promise<void> {
+  if (!isTauri || launchHandled) return;
+  launchHandled = true;
+  let args: string[] = [];
+  try {
+    args = await invoke<string[]>("launch_args");
+  } catch {
+    return;
+  }
+  if (args.includes("--today")) await openToday();
+  else if (args.includes("--quick-note")) await quickNote();
+}
 
 function typing(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable);
@@ -15,6 +36,8 @@ export default function App() {
   const ready = useApp((state) => state.ready);
   const active = useApp((state) => state.active);
   const split = useApp((state) => state.split);
+  const settingsOpen = useApp((state) => state.settingsOpen);
+  const calendarOpen = useApp((state) => state.calendarOpen);
   const dark = useDark();
 
   useEffect(() => {
@@ -22,7 +45,7 @@ export default function App() {
   }, [dark]);
 
   useEffect(() => {
-    void loadLibrary();
+    void loadLibrary().then(honourLaunchArgs);
   }, []);
 
   useEffect(() => {
@@ -54,6 +77,9 @@ export default function App() {
       } else if (key === "n" && event.shiftKey) {
         event.preventDefault();
         void quickNote();
+      } else if (event.key === "," && !event.shiftKey) {
+        event.preventDefault();
+        openSettings(true);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -77,6 +103,8 @@ export default function App() {
       ) : (
         <Library />
       )}
+      {ready && settingsOpen && <Settings />}
+      {ready && calendarOpen && <WritingCalendar />}
       <StampHost />
       <Notices />
     </div>

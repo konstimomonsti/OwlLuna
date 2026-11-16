@@ -16,7 +16,10 @@ import { openURL } from "../platform/host";
 import { clearJump, notify, openNotebook, useApp } from "../state/app";
 import type { NotebookDocument } from "./document";
 import { BOARD_MAX_ZOOM, BOARD_MIN_ZOOM } from "../canvas/board";
+import { CropView } from "./CropView";
+import { clampStrip } from "./zoomStrip";
 import { clampZoom, goToPage, setTool, type Session } from "./session";
+import { capturePointer } from "../canvas/pointer";
 
 const PAD = 28;
 const GAP = 22;
@@ -412,13 +415,15 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     }
     const picked = state.selectedItem?.pageID === page.id ? page.items.find((item) => item.id === state.selectedItem!.itemID) : undefined;
     const ruler = state.ruler?.pageID === page.id ? state.ruler : null;
+    const strip = state.zoomWindow?.pageID === page.id && state.zoomWindow.w && state.zoomWindow.h ? state.zoomWindow : null;
+    const cropping = state.croppingItem ? page.items.find((item) => item.id === state.croppingItem) : undefined;
     return (
       <>
         <svg width={1} height={1} style={{ position: "absolute", left: 0, top: 0, overflow: "visible", pointerEvents: "none" }}>
           <g transform={`scale(${zoom})`}>{marks}</g>
         </svg>
         {ruler && <RulerView ruler={ruler} zoom={zoom} session={session} toPage={(x, y) => toPage(page.id, x, y)} />}
-        {picked && state.editingItem !== picked.id && interactive && (
+        {picked && state.editingItem !== picked.id && state.croppingItem !== picked.id && interactive && (
           <>
             <ItemFrame
               item={picked}
@@ -434,6 +439,10 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
               </div>
             )}
           </>
+        )}
+        {strip && <StripMark strip={strip} zoom={zoom} page={page} session={session} toPage={(x, y) => toPage(page.id, x, y)} />}
+        {cropping && cropping.kind === "image" && (
+          <CropView doc={doc} pageID={page.id} item={cropping} zoom={zoom} toPage={(x, y) => toPage(page.id, x, y)} onDone={() => session.setState({ croppingItem: null })} />
         )}
         {bar}
       </>
@@ -521,7 +530,7 @@ function RulerView(props: { ruler: { x: number; y: number; angle: number; pageID
   const length = 520, depth = 48;
   const begin = (turn: boolean) => (event: React.PointerEvent) => {
     event.stopPropagation();
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    capturePointer(event.currentTarget as HTMLElement, event.pointerId);
     drag.current = { turn, start: props.toPage(event.clientX, event.clientY), origin: ruler };
   };
   const move = (event: React.PointerEvent) => {
@@ -560,6 +569,37 @@ function RulerView(props: { ruler: { x: number; y: number; angle: number; pageID
         onPointerDown={begin(true)} onPointerMove={move} onPointerUp={end} onPointerCancel={end}
         title="Turn the ruler"
         style={{ position: "absolute", right: -6, top: "50%", width: 20, height: 20, marginTop: -10, borderRadius: 3, background: "var(--board)", border: "1.5px solid #1B2230", pointerEvents: "auto", cursor: "grab", touchAction: "none" }}
+      />
+    </div>
+  );
+}
+
+/** The strip the zoom window shows, outlined on its page, with a grip to drag it by. Only the grip takes the pointer, so writing under the outline still works. */
+function StripMark(props: { strip: { x: number; y: number; w?: number; h?: number }; zoom: number; page: Page; session: Session; toPage: (x: number, y: number) => Point }) {
+  const { strip, zoom } = props;
+  const drag = useRef<{ start: Point; origin: { x: number; y: number } } | null>(null);
+  const w = (strip.w ?? 0) * zoom, h = (strip.h ?? 0) * zoom;
+  return (
+    <div data-testid="zoom-strip" style={{ position: "absolute", left: strip.x * zoom, top: strip.y * zoom, width: w, height: h, outline: "2px solid var(--mustard)", boxShadow: "0 0 0 1px var(--ink)", pointerEvents: "none", zIndex: 4 }}>
+      <div
+        data-hot
+        data-testid="zoom-strip-grip"
+        title="Drag the zoom window's strip"
+        onPointerDown={(event) => {
+          event.stopPropagation();
+          capturePointer(event.currentTarget, event.pointerId);
+          drag.current = { start: props.toPage(event.clientX, event.clientY), origin: { x: strip.x, y: strip.y } };
+        }}
+        onPointerMove={(event) => {
+          const state = drag.current, now = props.session.getState().zoomWindow;
+          if (!state || !now) return;
+          const at = props.toPage(event.clientX, event.clientY);
+          const moved = clampStrip({ x: state.origin.x + at.x - state.start.x, y: state.origin.y + at.y - state.start.y, w: strip.w ?? 0, h: strip.h ?? 0 }, props.page);
+          props.session.setState({ zoomWindow: { ...now, x: moved.x, y: moved.y } });
+        }}
+        onPointerUp={() => { drag.current = null; }}
+        onPointerCancel={() => { drag.current = null; }}
+        style={{ position: "absolute", left: 0, top: -16, width: 26, height: 16, background: "var(--mustard)", border: "1px solid var(--ink)", cursor: "move", pointerEvents: "auto", touchAction: "none" }}
       />
     </div>
   );

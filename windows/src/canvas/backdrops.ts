@@ -83,6 +83,18 @@ class Backdrops {
     return this.image(fs, notebookID, file);
   }
 
+  /** Like `picture`, but waits until the file has been read. Null if it can't be. */
+  async pictureReady(fs: FS, notebookID: string, file: string): Promise<Picture | null> {
+    const key = `${notebookID}/${file}`;
+    for (let attempt = 0; attempt < 400; attempt++) {
+      const found = this.image(fs, notebookID, file);
+      if (found) return found;
+      if (this.images.get(key) === "failed") return null;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    return null;
+  }
+
   /**
    * What lies behind a page, as sharp as is ready. `scale` is the pixels a point should get; a sharper rendering
    * is begun when the one in hand falls short.

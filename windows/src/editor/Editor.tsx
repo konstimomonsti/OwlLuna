@@ -11,14 +11,22 @@ import { anchorBelow, IconButton, Menu, MenuBreak, MenuRow, type MenuAnchor } fr
 import { paperColorNames, paperColors, paperCSS, templateNames, type PaperTemplate } from "../model/paper";
 import { pickFiles } from "../platform/host";
 import { closeTab, notify, renameNotebook, setSplit, showLibrary, showTab, updateSettings, useApp } from "../state/app";
+import "../design/editor-panels.css";
 import { assetPath } from "../storage/package";
-import { extensionOf, pasteFromClipboard, placePicture, placeSticker } from "./actions";
+import { extensionOf, pasteFromClipboard, placeLink, placePicture, placeSticker, updateLink } from "./actions";
 import { copySelection, deleteSelection, duplicateSelection, InkBar, ItemBar } from "./bars";
 import { BoardControls, backToStart, showEverything } from "./BoardControls";
 import type { NotebookDocument } from "./document";
 import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
+import { FindPanel } from "./FindPanel";
+import { LinkSheet } from "./LinkSheet";
+import { Navigator } from "./Navigator";
+import { Outline } from "./Outline";
+import { PaperDrawer } from "./PaperDrawer";
 import { goToPage, sessionFor, setTool, type Session } from "./session";
 import { ToolTray } from "./ToolTray";
+import { ZoomWindow } from "./ZoomWindow";
+import type { LinkItem } from "../model/notebook";
 
 function typing(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
@@ -37,6 +45,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
   const canvas = useRef<EditorCanvasHandle>(null);
   const [menu, setMenu] = useState<{ kind: "more" | "add" | "zoom" | "stickers" | "paper"; anchor: MenuAnchor } | null>(null);
   const [renaming, setRenaming] = useState(false);
+  const [linkSheet, setLinkSheet] = useState<{ editing: { pageID: string; item: LinkItem } | null } | null>(null);
 
   const pages = doc.manifest.pages;
   const index = Math.max(doc.pageIndex(state.currentPage), 0);
@@ -157,11 +166,17 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
     };
   }, [props.active, doc, session, pens, page, board, settings.pageFlow, turn, toggleBookmark, centre, readAsset, viewSize]);
 
+  const toggleZoomWindow = useCallback(() => {
+    if (session.getState().zoomWindow) return session.setState({ zoomWindow: null });
+    const at = centre();
+    session.setState({ zoomWindow: { pageID: at.pageID, x: Math.max(at.x - 150, 0), y: Math.max(at.y - 20, 0) } });
+  }, [session, centre]);
+
   const others = tabs.filter((id) => id !== doc.id);
   const close = () => setMenu(null);
 
   return (
-    <div className={`editor${state.focus ? " focus" : ""}`} data-testid="editor" data-notebook={doc.id}>
+    <div className={`editor${state.focus ? " focus" : ""}${state.zoomWindow ? " zoomed" : ""}`} data-testid="editor" data-notebook={doc.id}>
       {!state.focus && (
         <header className="editor-bar">
           {!props.secondary && <IconButton label="Library" onClick={showLibrary} testid="back-to-library"><ChevronLeft /></IconButton>}
@@ -182,7 +197,9 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           ) : (
             <button type="button" className="title-button display truncate" title="Rename" onClick={() => setRenaming(true)} data-testid="notebook-title">{doc.manifest.title}</button>
           )}
-          {doc.saveState === "failed" && <span className="tag" style={{ background: "var(--tomato)", color: "var(--on-tomato)" }} title={doc.saveError ?? ""}>Not saved</span>}
+          <span className={`save-state meta ${doc.saveState}`} data-testid="save-state" data-state={doc.saveState} title={doc.saveError ?? ""}>
+            {doc.saveState === "saved" ? "Saved" : doc.saveState === "saving" ? "Saving…" : doc.saveState === "failed" ? "Not saved" : "Unsaved"}
+          </span>
           {!props.secondary && tabs.length > 1 && (
             <div className="tabs" role="tablist">
               {tabs.map((id) => (
@@ -218,15 +235,20 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
         </header>
       )}
 
+      {state.panel === "find" && !state.focus && <FindPanel doc={doc} session={session} version={doc.getVersion()} active={props.active} />}
+
       <div className="editor-stage">
+        {state.panel === "navigator" && !board && !state.focus && <Navigator doc={doc} session={session} version={doc.getVersion()} />}
         <EditorCanvas
           ref={canvas}
           doc={doc}
           session={session}
           selectionBar={(bounds) => <InkBar doc={doc} session={session} bounds={bounds} onToText={() => notify("Handwriting to Text arrives with the Windows services.")} onMakeCard={() => notify("Flashcards arrive with the study tools.")} />}
-          itemBar={(pageID, item) => <ItemBar doc={doc} session={session} pageID={pageID} item={item} onCrop={() => session.setState({ croppingItem: item.id })} onEditLink={() => {}} onMakeCard={() => {}} />}
+          itemBar={(pageID, item) => <ItemBar doc={doc} session={session} pageID={pageID} item={item} onCrop={() => session.setState({ croppingItem: item.id })} onEditLink={() => { if (item.kind === "link") setLinkSheet({ editing: { pageID, item } }); }} onMakeCard={() => {}} />}
         />
         {board && !state.focus && <BoardControls doc={doc} session={session} canvas={canvas} />}
+        {state.panel === "paper" && !board && !state.focus && <PaperDrawer doc={doc} session={session} version={doc.getVersion()} />}
+        {state.panel === "outline" && !state.focus && <Outline doc={doc} session={session} version={doc.getVersion()} />}
         {state.focus && (
           <div className="focus-exit">
             <IconButton label="Leave Focus (Esc)" onClick={() => session.setState({ focus: false })} testid="leave-focus"><X /></IconButton>
@@ -234,14 +256,16 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
         )}
       </div>
 
+      {state.zoomWindow && !state.focus && <ZoomWindow doc={doc} session={session} version={doc.getVersion()} />}
+
       <ToolTray
         session={session}
         actions={{
           addPicture: () => void addPicture(),
           addSticker: (anchor) => setMenu({ kind: "stickers", anchor }),
-          addLink: () => notify("Links arrive with the next step."),
+          addLink: () => setLinkSheet({ editing: null }),
           toggleRuler: () => session.setState((s) => ({ ruler: s.ruler ? null : { pageID: s.currentPage, ...rulerStart(centre()), angle: 0 } })),
-          toggleZoomWindow: () => notify("The zoom window arrives with the next step."),
+          toggleZoomWindow,
           inkToText: () => notify("Handwriting to Text arrives with the Windows services."),
         }}
       />
@@ -300,7 +324,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           <MenuRow icon={<ImageIcon />} onClick={() => { close(); void addPicture(); }}>Picture…</MenuRow>
           <MenuRow icon={<Type />} onClick={() => { setTool(session, { kind: "text" }); close(); }}>Text Box</MenuRow>
           <MenuRow icon={<StickyNote />} onClick={() => setMenu({ kind: "stickers", anchor: menu.anchor })}>Sticker</MenuRow>
-          <MenuRow icon={<Link2 />} onClick={() => { close(); notify("Links arrive with the next step."); }}>Link…</MenuRow>
+          <MenuRow icon={<Link2 />} onClick={() => { close(); setLinkSheet({ editing: null }); }} testid="add-link-row">Link…</MenuRow>
           <MenuRow icon={<Tally1 />} onClick={() => { setTool(session, { kind: "tape" }); close(); }}>Study Tape</MenuRow>
         </Menu>
       )}
@@ -324,6 +348,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           <MenuRow icon={<Search />} keys="Ctrl+F" onClick={() => { session.setState({ panel: "find" }); close(); }}>Find in Notebook</MenuRow>
           <MenuRow icon={<ListTree />} onClick={() => { session.setState({ panel: "outline" }); close(); }}>Outline and Bookmarks</MenuRow>
           <MenuBreak />
+          <MenuRow icon={<ZoomIn />} chosen={state.zoomWindow !== null} onClick={() => { toggleZoomWindow(); close(); }} testid="more-zoom-window">Zoom Window</MenuRow>
           <MenuRow icon={<Layers />} onClick={() => { session.setState({ panel: "cards" }); close(); }}>Flashcards</MenuRow>
           <MenuRow icon={<Mic />} onClick={() => { session.setState({ panel: "recordings" }); close(); }}>Recordings</MenuRow>
           <MenuRow icon={<MonitorPlay />} keys="Ctrl+Alt+Enter" onClick={() => { close(); notify("Presenting arrives with a later step."); }}>Present</MenuRow>
@@ -341,6 +366,18 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           )}
           <MenuRow icon={<FileText />} onClick={() => { setRenaming(true); close(); }}>Rename…</MenuRow>
         </Menu>
+      )}
+      {linkSheet && (
+        <LinkSheet
+          doc={doc}
+          editing={linkSheet.editing?.item ?? null}
+          onClose={() => setLinkSheet(null)}
+          onSave={(target, label) => {
+            if (linkSheet.editing) updateLink(doc, linkSheet.editing.pageID, linkSheet.editing.item.id, target, label);
+            else placeLink(doc, session, target, label, centre());
+            setLinkSheet(null);
+          }}
+        />
       )}
     </div>
   );

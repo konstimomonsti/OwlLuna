@@ -113,3 +113,12 @@ export async function pasteFromClipboard(doc: NotebookDocument, session: Session
   }
   return false;
 }
+
+/** Changes where an existing link goes and what it says. */
+export function updateLink(doc: NotebookDocument, pageID: string, itemID: string, target: LinkTarget, label: string): void {
+  doc.updateItem(pageID, itemID, "Edit Link", (item) => {
+    if (item.kind !== "link") return;
+    item.target = target;
+    item.label = label;
+  });
+}

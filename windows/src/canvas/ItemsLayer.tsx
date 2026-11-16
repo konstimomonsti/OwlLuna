@@ -11,6 +11,7 @@ import { isDarkPaper } from "../model/paper";
 import { assetPath } from "../storage/package";
 import { stickerDataURL, stickerNamed } from "./stickers";
 import { faceCSS, LINE_HEIGHT, mathRuns, textLines } from "./textLayout";
+import { capturePointer } from "./pointer";
 
 const urls = new Map<string, string>();
 const pendingURLs = new Map<string, Promise<string | null>>();
@@ -311,7 +312,7 @@ export function ItemFrame(props: {
   const begin = (grip: Grip) => (event: ReactPointerEvent) => {
     event.stopPropagation();
     event.preventDefault();
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    capturePointer(event.currentTarget as HTMLElement, event.pointerId);
     drag.current = { grip, start: props.toPage(event.clientX, event.clientY), origin: item, moved: false };
   };
   const move = (event: ReactPointerEvent) => {

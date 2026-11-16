@@ -12,6 +12,7 @@ import type { ToolPreset } from "../model/tools";
 import type { PenAction, Settings } from "../storage/libraryFiles";
 import type { PageSurface } from "./pageSurface";
 import { draggedShape, holdDuration, holdSlop, loopOutline, recognizeShape, scribbleErased, shapePolylines, type SnappedShape } from "./shapeSnap";
+import { capturePointer, stepsAlong } from "./pointer";
 
 export interface PagePoint {
   pageID: string;
@@ -112,7 +113,7 @@ export class InkController {
     }
     if (this.operation) return;
     const target = event.target as HTMLElement;
-    target.setPointerCapture?.(event.pointerId);
+    capturePointer(target, event.pointerId);
     const settings = this.env.settings();
     const isPen = event.pointerType === "pen";
     // A mouse's middle button, or any button with the space bar held, drags the pages.
@@ -191,7 +192,7 @@ export class InkController {
     const settings = this.env.settings();
     const tool = this.env.session.getState().tool;
     this.touches.set(event.pointerId, { x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, at: performance.now() });
-    (event.target as HTMLElement).setPointerCapture?.(event.pointerId);
+    capturePointer(event.target as HTMLElement, event.pointerId);
     // One finger alone writes when fingers draw; a second finger turns it into a pinch and takes the mark back.
     const fingerDraws = settings.drawWith === "penAndFinger" && tool.kind !== "hand";
     if (this.touches.size === 1 && fingerDraws && !this.operation) {
@@ -450,11 +451,18 @@ export class InkController {
     const radius = settings.eraserWidth / 2;
     const working = new Map<string, Stroke[]>();
     const changed = new Set<string>();
+    // Where the eraser last was, so a fast swipe is rubbed along its whole length and not just where it was sampled.
+    let last: PagePoint | null = null;
     const rub = (source: PointerEvent) => {
       const at = env.pageAt(source.clientX, source.clientY);
-      if (!at) return;
+      if (!at) { last = null; return; }
+      const from = last && last.pageID === at.pageID ? last : null;
+      last = at;
       this.show({ eraser: { pageID: at.pageID, x: at.x, y: at.y, radius } });
-      const before = working.get(at.pageID) ?? env.doc.ink(at.pageID);
+      for (const point of from ? stepsAlong(from, at, Math.max(radius / 2, 0.5)) : [at]) rubAt(at.pageID, point);
+    };
+    const rubAt = (pageID: string, at: Point) => {
+      const before = working.get(pageID) ?? env.doc.ink(pageID);
       let touched = false;
       const after: Stroke[] = [];
       for (const stroke of before) {
@@ -470,9 +478,9 @@ export class InkController {
         }
       }
       if (touched) {
-        working.set(at.pageID, after);
-        changed.add(at.pageID);
-        env.surface(at.pageID)?.setOverride(after);
+        working.set(pageID, after);
+        changed.add(pageID);
+        env.surface(pageID)?.setOverride(after);
       }
     };
     const end = (commit: boolean) => {

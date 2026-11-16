@@ -11,6 +11,7 @@ import { isDarkPaper, paperCSS } from "../model/paper";
 import type { NotebookDocument } from "./document";
 import type { EditorCanvasHandle } from "./EditorCanvas";
 import type { Session } from "./session";
+import { capturePointer } from "../canvas/pointer";
 
 export const START_VIEW = { x: -40, y: -40 };
 
@@ -121,7 +122,7 @@ export function BoardControls(props: { doc: NotebookDocument; session: Session; 
             style={{ width: MAP_W, height: MAP_H, display: "block", touchAction: "none", cursor: "crosshair" }}
             onPointerDown={(event) => {
               event.stopPropagation();
-              try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* a pointer that has already gone */ }
+              capturePointer(event.currentTarget, event.pointerId);
               frozen.current = frame.current;
               centreOn(event);
             }}

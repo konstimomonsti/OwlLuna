@@ -50,6 +50,9 @@ export interface AppState {
   notices: Notice[];
   /** Where to land in a notebook that is about to open. */
   jump: { notebook: string; page: string } | null;
+  /** The Settings sheet and the writing calendar are opened from the library, the editor and the keyboard alike. */
+  settingsOpen: boolean;
+  calendarOpen: boolean;
 }
 
 export const useApp = create<AppState>(() => ({
@@ -68,6 +71,8 @@ export const useApp = create<AppState>(() => ({
   unlocked: [],
   notices: [],
   jump: null,
+  settingsOpen: false,
+  calendarOpen: false,
 }));
 
 const get = useApp.getState;
@@ -196,9 +201,22 @@ export async function changeNotebook(id: string, work: (manifest: Manifest) => v
 
 // Navigation
 
+/** Asks the user to prove who they are. Registered by the lock service, so this file doesn't depend on it. */
+type Authenticator = (reason: string) => Promise<boolean>;
+let authenticator: Authenticator | null = null;
+
+export function setAuthenticator(next: Authenticator | null): void {
+  authenticator = next;
+}
+
 export async function openNotebook(id: string, pageID?: string): Promise<boolean> {
   const manifest = get().manifests[id];
   if (!manifest || manifest.trashedAt !== null) return false;
+  // Every way in, links and search results included, comes through here, so the lock can't be walked around.
+  if (manifest.locked && !get().unlocked.includes(id)) {
+    if (!authenticator || !(await authenticator(`Open “${manifest.title}”`))) return false;
+    unlock(id);
+  }
   try {
     await openDocument(id);
   } catch (error) {
@@ -245,12 +263,25 @@ export async function closeTab(id: string): Promise<boolean> {
   return true;
 }
 
+/** Closes a notebook's tab if it has one. False only when it could not be saved. */
+export async function closeTabIfOpen(id: string): Promise<boolean> {
+  return get().tabs.includes(id) ? closeTab(id) : true;
+}
+
 export function clearJump(): void {
   set({ jump: null });
 }
 
 export function setScope(scope: Scope): void {
   set({ scope });
+}
+
+export function openSettings(open = true): void {
+  set({ settingsOpen: open });
+}
+
+export function openCalendar(open = true): void {
+  set({ calendarOpen: open });
 }
 
 export function unlock(id: string): void {
@@ -366,6 +397,11 @@ export async function purgeExpiredTrash(now = Date.now()): Promise<number> {
   const expired = Object.values(get().manifests).filter((manifest) => manifest.trashedAt !== null && now - manifest.trashedAt > limit).map((manifest) => manifest.id);
   await deleteForever(expired);
   return expired.length;
+}
+
+/** Empties Recently Deleted at once. */
+export async function emptyTrash(): Promise<void> {
+  await deleteForever(Object.values(get().manifests).filter((manifest) => manifest.trashedAt !== null).map((manifest) => manifest.id));
 }
 
 export async function duplicateNotebook(id: string): Promise<Manifest | null> {
