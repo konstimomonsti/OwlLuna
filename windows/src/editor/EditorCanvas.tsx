@@ -6,6 +6,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffec
 import { useStore } from "zustand";
 import { InkController, itemContains, runPenAction, type Overlay, type PagePoint } from "../canvas/inkController";
 import { ItemFrame, ItemsLayer } from "../canvas/ItemsLayer";
+import { cachedLines } from "../canvas/pdfText";
 import { PageView } from "../canvas/PageView";
 import type { PageSurface } from "../canvas/pageSurface";
 import { uuid } from "../model/ids";
@@ -296,6 +297,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     },
     itemAt,
     act: (action) => runPenAction(action, doc, session),
+    snapLines: (pageID) => { const target = doc.page(pageID); return target ? cachedLines(doc.fs, doc.id, target) : null; },
   }), [doc, session]);
 
   useEffect(() => () => controller.dispose(), [controller]);
@@ -361,6 +363,11 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
 
   const margin = 700;
   const visible = layout.rects.filter((rect) => board || (rect.top < scroll.y + size.h + margin && rect.top + rect.h > scroll.y - margin));
+  // The text lines of PDF pages in view are read ahead, so a highlighter can snap to them from the first stroke.
+  const visibleKey = visible.map((rect) => rect.page.id).join();
+  useEffect(() => {
+    for (const rect of visible) cachedLines(doc.fs, doc.id, rect.page);
+  }, [visibleKey, doc]);
   const hot = interactive && state.tool.kind !== "lasso" && state.tool.kind !== "text";
   const selection = state.selection;
   const cursor = state.tool.kind === "hand" ? "grab" : state.tool.kind === "eraser" ? "none" : state.tool.kind === "text" ? "text" : state.tool.kind === "lasso" ? "default" : "crosshair";

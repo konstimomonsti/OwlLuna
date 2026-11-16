@@ -2,27 +2,18 @@
 
 import type { NotebookDocument } from "../editor/document";
 import { fnv1a } from "../model/ids";
-import type { Rect, Stroke } from "../model/ink";
+import type { Stroke } from "../model/ink";
 import type { Manifest, Page } from "../model/notebook";
 import type { FS } from "../platform/fs";
 import { loadInk } from "../storage/package";
 import { backdrops } from "./backdrops";
-import { boardContentBounds } from "./board";
-import { drawItems } from "./renderItems";
+import { pageRegion } from "./board";
+import { drawItems, drawMarks } from "./renderItems";
 import { drawPaper, drawStrokes, pageIsDark } from "./renderPage";
 
 const MAX_PIXELS = 4096 * 4096;
-const EMPTY_BOARD: Rect = { x: 0, y: 0, w: 612, h: 400 };
 
-/** The part of a page that is drawn: the page itself, or for a whiteboard what is on it with room round it. */
-export function pageRegion(page: Page, strokes: Stroke[]): Rect {
-  if (!page.edgeless) return { x: 0, y: 0, w: page.size.w, h: page.size.h };
-  const bounds = boardContentBounds(strokes, page.items);
-  if (!bounds) return { ...EMPTY_BOARD };
-  const pad = 40;
-  return { x: bounds.x - pad, y: bounds.y - pad, w: bounds.w + pad * 2, h: bounds.h + pad * 2 };
-}
-
+export { pageRegion };
 export async function renderPageToCanvas(
   fs: FS, notebookID: string, page: Page, strokes: Stroke[], scale: number,
   options: { items?: boolean; background?: boolean; manifest?: Pick<Manifest, "pages"> } = {},
@@ -41,6 +32,7 @@ export async function renderPageToCanvas(
     const backdrop = await backdrops.ready(fs, notebookID, page.background, page.size, fit);
     drawPaper(ctx, page, { visible: region, pixelsPerPoint: fit, backdrop });
   }
+  if (options.background !== false) drawMarks(ctx, page);
   if (withItems) await drawItems(ctx, fs, notebookID, page, "under", undefined, options.manifest);
   drawStrokes(ctx, strokes, { darkPaper: pageIsDark(page), layer: "all", visible: region });
   if (withItems) await drawItems(ctx, fs, notebookID, page, "over", undefined, options.manifest);

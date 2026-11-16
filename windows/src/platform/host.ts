@@ -110,3 +110,10 @@ export function safeFileName(name: string, fallback = "Untitled"): string {
   if (!cleaned || /^(con|prn|aux|nul|com\d|lpt\d)$/i.test(cleaned)) return fallback;
   return cleaned;
 }
+
+/** Hears the arguments of a second launch (the jump list's `--today` and `--quick-note`) in the running app. Does nothing in a browser. */
+export async function onLaunchArgs(handler: (args: string[]) => void): Promise<() => void> {
+  if (!isTauri) return () => {};
+  const events = await import("@tauri-apps/api/event");
+  return events.listen<string[]>("launch-args", (event) => handler(Array.isArray(event.payload) ? event.payload : []));
+}

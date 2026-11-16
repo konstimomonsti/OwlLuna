@@ -139,6 +139,11 @@ function adopt(manifest: Manifest): void {
   set((state) => ({ manifests: { ...state.manifests, [manifest.id]: manifest } }));
 }
 
+/** Shows a notebook made outside the app's own flows, such as an import, on the shelf. */
+export function registerManifest(manifest: Manifest): void {
+  adopt(manifest);
+}
+
 let activityTimer: ReturnType<typeof setTimeout> | null = null;
 
 function wrote(notebookID: string, strokes: number): void {

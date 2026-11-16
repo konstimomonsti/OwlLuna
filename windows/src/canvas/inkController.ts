@@ -12,6 +12,7 @@ import type { ToolPreset } from "../model/tools";
 import type { PenAction, Settings } from "../storage/libraryFiles";
 import type { PageSurface } from "./pageSurface";
 import { draggedShape, holdDuration, holdSlop, loopOutline, recognizeShape, scribbleErased, shapePolylines, type SnappedShape } from "./shapeSnap";
+import { snapToLine } from "./pdfText";
 import { capturePointer, stepsAlong } from "./pointer";
 
 export interface PagePoint {
@@ -51,6 +52,8 @@ export interface ControllerEnv {
   itemAt(at: PagePoint): PageItem | null;
   act(action: PenAction): void;
   turnPage?(direction: 1 | -1): void;
+  /** The lines of text on a PDF page, in page points, once they have been read: where a highlighter snaps. */
+  snapLines?(pageID: string): Rect[] | null;
 }
 
 interface Operation {
@@ -432,6 +435,18 @@ export class InkController {
           const struck = scribbleErased(points, ink.map(strokePoints));
           if (struck.length > 0) {
             env.doc.removeStrokes(start.pageID, new Set(struck.map((index) => ink[index].id)), "Scribble to Erase");
+            return;
+          }
+        }
+        // A highlighter begun on a line of a PDF's text lays a straight band along that line.
+        if (pen.ink === "highlighter" && !edge) {
+          const lines = env.snapLines?.(start.pageID);
+          const snap = lines ? snapToLine(points, lines) : null;
+          if (snap) {
+            env.doc.addStrokes(start.pageID, [{
+              id: uuid(), ink: pen.ink, color: pen.color, width: snap.height, at, even: true,
+              pts: [snap.from.x, snap.from.y, 0.5, 0, snap.to.x, snap.to.y, 0.5, Math.max(Math.round(performance.now() - began), 16)],
+            }], "Highlight Line");
             return;
           }
         }

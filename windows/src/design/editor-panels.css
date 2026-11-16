@@ -66,3 +66,18 @@
 /* Crop */
 
 .crop-bar { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 960; display: flex; gap: var(--x2); padding: var(--x1); }
+
+/* Export */
+
+.proof-strip { display: flex; gap: var(--x2); overflow-x: auto; padding: var(--x2) 2px var(--x3); }
+.proof { flex: none; width: 78px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px; border: 1px solid transparent; border-radius: var(--r-plate); background: transparent; font-size: 11px; color: var(--text-secondary); }
+.proof:hover { background: var(--well); }
+.proof.on { border-color: var(--ink); background: var(--board); color: var(--ink); font-weight: 600; }
+.proof img, .proof-blank { width: 100%; aspect-ratio: 3 / 4; object-fit: contain; background: #fff; border: 1px solid var(--rule); border-radius: 2px; }
+.range-row { display: flex; align-items: center; gap: var(--x2); flex-wrap: wrap; }
+.range-field { width: 76px; }
+
+/* PDF text selection */
+
+.pdf-select-bar { display: flex; align-items: center; gap: 4px; padding: 3px; }
+.pdf-select-bar .swatch.small { margin: 0 2px; }

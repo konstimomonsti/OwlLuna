@@ -1,7 +1,7 @@
 // Pure helpers for a whiteboard's view: where its content is, and how to bring it all into sight.
 
 import { inkBounds, unionRects, type Point, type Rect, type Stroke } from "../model/ink";
-import type { PageItem } from "../model/notebook";
+import type { Page, PageItem } from "../model/notebook";
 
 /** How far a whiteboard zooms. Pages keep their own, narrower range. */
 export const BOARD_MIN_ZOOM = 0.05;
@@ -32,4 +32,15 @@ export function fitBoard(bounds: Rect, view: { w: number; h: number }, padding =
   const zoom = Math.min(Math.max(wanted, BOARD_MIN_ZOOM), Math.min(FIT_MAX_ZOOM, BOARD_MAX_ZOOM));
   const centre = { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 };
   return { zoom, origin: { x: centre.x - view.w / zoom / 2, y: centre.y - view.h / zoom / 2 } };
+}
+
+const EMPTY_BOARD: Rect = { x: 0, y: 0, w: 612, h: 400 };
+
+/** The part of a page that is drawn when it is taken off screen: the page itself, or for a whiteboard what is on it with room round it. */
+export function pageRegion(page: Page, strokes: Stroke[]): Rect {
+  if (!page.edgeless) return { x: 0, y: 0, w: page.size.w, h: page.size.h };
+  const bounds = boardContentBounds(strokes, page.items);
+  if (!bounds) return { ...EMPTY_BOARD };
+  const pad = 40;
+  return { x: bounds.x - pad, y: bounds.y - pad, w: bounds.w + pad * 2, h: bounds.h + pad * 2 };
 }

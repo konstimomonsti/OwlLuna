@@ -192,3 +192,15 @@ export async function drawItems(
     }
   }
 }
+
+/** Text marks on a PDF page: translucent bands multiplied into the page, so the text under them stays readable. */
+export function drawMarks(ctx: Ctx, page: Page): void {
+  if (!page.marks?.length) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "multiply";
+  for (const mark of page.marks) {
+    ctx.fillStyle = `${highlightHex[mark.color]}99`;
+    for (const [x, y, w, h] of mark.rects) ctx.fillRect(x, y, w, h);
+  }
+  ctx.restore();
+}

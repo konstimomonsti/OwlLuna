@@ -2,7 +2,7 @@
 
 import {
   Bookmark, BookmarkCheck, ChevronLeft, Columns2, Ellipsis, FileDown, Focus, Hand, LayoutGrid, Maximize, Mic, MonitorPlay, PenLine, Plus, Redo2, ScrollText,
-  Search, StickyNote, Undo2, X, ZoomIn, ListTree, Layers, FileText, Image as ImageIcon, Link2, Type, Tally1, FilePlus2, GalleryVertical, GalleryHorizontal, House, Maximize2, Palette,
+  Search, StickyNote, Undo2, X, ZoomIn, ListTree, Layers, FileText, Image as ImageIcon, Link2, Type, Tally1, FilePlus2, GalleryVertical, GalleryHorizontal, House, Maximize2, Palette, TextSelect, FileInput, ImagePlus,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useStore } from "zustand";
@@ -18,6 +18,10 @@ import { copySelection, deleteSelection, duplicateSelection, InkBar, ItemBar } f
 import { BoardControls, backToStart, showEverything } from "./BoardControls";
 import type { NotebookDocument } from "./document";
 import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
+import { ExportSheet } from "./ExportSheet";
+import { addPdfPagesTo, addPicturePageTo } from "./importFiles";
+import { PdfTextLayer } from "../canvas/PdfTextLayer";
+import { refreshWords } from "../services/words";
 import { FindPanel } from "./FindPanel";
 import { LinkSheet } from "./LinkSheet";
 import { Navigator } from "./Navigator";
@@ -45,6 +49,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
   const canvas = useRef<EditorCanvasHandle>(null);
   const [menu, setMenu] = useState<{ kind: "more" | "add" | "zoom" | "stickers" | "paper"; anchor: MenuAnchor } | null>(null);
   const [renaming, setRenaming] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [linkSheet, setLinkSheet] = useState<{ editing: { pageID: string; item: LinkItem } | null } | null>(null);
 
   const pages = doc.manifest.pages;
@@ -166,6 +171,14 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
     };
   }, [props.active, doc, session, pens, page, board, settings.pageFlow, turn, toggleBookmark, centre, readAsset, viewSize]);
 
+  // PDF text is read into the words cache once the writing has paused, and when the notebook is left.
+  const version = doc.getVersion();
+  useEffect(() => {
+    const timer = setTimeout(() => void refreshWords(doc).catch(() => {}), 4000);
+    return () => clearTimeout(timer);
+  }, [doc, version]);
+  useEffect(() => () => void refreshWords(doc).catch(() => {}), [doc]);
+
   const toggleZoomWindow = useCallback(() => {
     if (session.getState().zoomWindow) return session.setState({ zoomWindow: null });
     const at = centre();
@@ -226,6 +239,9 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           {board && (
             <IconButton label="Paper" onClick={(event) => setMenu({ kind: "paper", anchor: anchorBelow(event.currentTarget, "end") })} testid="board-paper"><Palette /></IconButton>
           )}
+          {page.background.kind === "pdf" && (
+            <IconButton label="Select Text" on={state.textSelect} onClick={() => session.setState({ textSelect: !state.textSelect })} testid="select-text"><TextSelect /></IconButton>
+          )}
           <IconButton label={page.bookmark ? "Remove Bookmark (Ctrl+B)" : "Bookmark This Page (Ctrl+B)"} on={page.bookmark === true} onClick={toggleBookmark} testid="bookmark">
             {page.bookmark ? <BookmarkCheck /> : <Bookmark />}
           </IconButton>
@@ -241,6 +257,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
         {state.panel === "navigator" && !board && !state.focus && <Navigator doc={doc} session={session} version={doc.getVersion()} />}
         <EditorCanvas
           ref={canvas}
+          pageExtras={(target, zoom) => (target.background.kind === "pdf" ? <PdfTextLayer doc={doc} page={target} zoom={zoom} selecting={state.textSelect} /> : null)}
           doc={doc}
           session={session}
           selectionBar={(bounds) => <InkBar doc={doc} session={session} bounds={bounds} onToText={() => notify("Handwriting to Text arrives with the Windows services.")} onMakeCard={() => notify("Flashcards arrive with the study tools.")} />}
@@ -322,6 +339,8 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           {!board && <MenuRow icon={<FilePlus2 />} keys="Ctrl+Enter" onClick={() => { const added = doc.addPage(page.id); goToPage(session, added.id); close(); }} testid="add-page-row">Page After This One</MenuRow>}
           {!board && <MenuBreak />}
           <MenuRow icon={<ImageIcon />} onClick={() => { close(); void addPicture(); }}>Picture…</MenuRow>
+          {!board && <MenuRow icon={<FileInput />} onClick={() => { close(); void addPdfPagesTo(doc, page.id).then((first) => { if (first) goToPage(session, first); }); }} testid="add-pdf-pages">Pages from PDF…</MenuRow>}
+          {!board && <MenuRow icon={<ImagePlus />} onClick={() => { close(); void addPicturePageTo(doc, page.id).then((first) => { if (first) goToPage(session, first); }); }} testid="add-picture-page">Picture as Page…</MenuRow>}
           <MenuRow icon={<Type />} onClick={() => { setTool(session, { kind: "text" }); close(); }}>Text Box</MenuRow>
           <MenuRow icon={<StickyNote />} onClick={() => setMenu({ kind: "stickers", anchor: menu.anchor })}>Sticker</MenuRow>
           <MenuRow icon={<Link2 />} onClick={() => { close(); setLinkSheet({ editing: null }); }} testid="add-link-row">Link…</MenuRow>
@@ -348,11 +367,14 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           <MenuRow icon={<Search />} keys="Ctrl+F" onClick={() => { session.setState({ panel: "find" }); close(); }}>Find in Notebook</MenuRow>
           <MenuRow icon={<ListTree />} onClick={() => { session.setState({ panel: "outline" }); close(); }}>Outline and Bookmarks</MenuRow>
           <MenuBreak />
+          {page.background.kind === "pdf" && (
+            <MenuRow icon={<TextSelect />} chosen={state.textSelect} onClick={() => { session.setState({ textSelect: !state.textSelect }); close(); }} testid="more-select-text">Select Text</MenuRow>
+          )}
           <MenuRow icon={<ZoomIn />} chosen={state.zoomWindow !== null} onClick={() => { toggleZoomWindow(); close(); }} testid="more-zoom-window">Zoom Window</MenuRow>
           <MenuRow icon={<Layers />} onClick={() => { session.setState({ panel: "cards" }); close(); }}>Flashcards</MenuRow>
           <MenuRow icon={<Mic />} onClick={() => { session.setState({ panel: "recordings" }); close(); }}>Recordings</MenuRow>
           <MenuRow icon={<MonitorPlay />} keys="Ctrl+Alt+Enter" onClick={() => { close(); notify("Presenting arrives with a later step."); }}>Present</MenuRow>
-          <MenuRow icon={<FileDown />} onClick={() => { close(); notify("Export arrives with a later step."); }}>Export…</MenuRow>
+          <MenuRow icon={<FileDown />} onClick={() => { close(); setExporting(true); }} testid="more-export">Export…</MenuRow>
           <MenuBreak />
           <MenuRow icon={<PenLine />} chosen={settings.drawWith === "pen"} onClick={() => { updateSettings({ drawWith: "pen" }); close(); }}>Draw With Pen Only</MenuRow>
           <MenuRow icon={<Hand />} chosen={settings.drawWith === "penAndFinger"} onClick={() => { updateSettings({ drawWith: "penAndFinger" }); close(); }}>Draw With Pen and Finger</MenuRow>
@@ -367,6 +389,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           <MenuRow icon={<FileText />} onClick={() => { setRenaming(true); close(); }}>Rename…</MenuRow>
         </Menu>
       )}
+      {exporting && <ExportSheet doc={doc} session={session} onClose={() => setExporting(false)} />}
       {linkSheet && (
         <LinkSheet
           doc={doc}

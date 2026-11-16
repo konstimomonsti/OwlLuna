@@ -1,7 +1,7 @@
 // The library: a shelf of notebooks with a sidebar, search, sorting, a list layout and selection.
 
 import {
-  BookOpen, Check, Copy, Ellipsis, FileDown, FilePlus2, Flag, FlagOff, Folder as FolderIcon, FolderInput, LayoutGrid, List, Lock, LockOpen, NotebookPen, PanelLeft, Palette,
+  BookOpen, Check, Copy, Ellipsis, FileDown, FileInput, FilePlus2, ImagePlus, Flag, FlagOff, Folder as FolderIcon, FolderInput, LayoutGrid, List, Lock, LockOpen, NotebookPen, PanelLeft, Palette,
   Pencil, PenLine, Plus, Presentation, Star, SquareCheck, Sunrise, Tags, Trash2, Undo2, ArrowUpDown, SquareArrowOutUpRight,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -22,6 +22,7 @@ import {
   renameNotebook, restoreNotebooks, setScope, trashNotebooks, updateSettings, useApp,
 } from "../state/app";
 import { folderPath } from "../storage/libraryFiles";
+import { importDropped, pickAndImportPdf, pickAndImportPictures } from "../editor/importFiles";
 import { Cover } from "./Cover";
 import { beginDrag, dragged, endDrag } from "./drag";
 import { Glance } from "./Glance";
@@ -126,7 +127,15 @@ export function Library() {
     <div className="library" data-testid="library">
       {settings.sidebarOpen && <Sidebar />}
 
-      <main className="library-main">
+      <main
+        className="library-main"
+        onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }}
+        onDrop={(event) => {
+          if (event.dataTransfer.files.length === 0) return;
+          event.preventDefault();
+          void importDropped([...event.dataTransfer.files]);
+        }}
+      >
         <div className="library-bar">
           <IconButton label={settings.sidebarOpen ? "Hide sidebar" : "Show sidebar"} on={settings.sidebarOpen} onClick={() => updateSettings({ sidebarOpen: !settings.sidebarOpen })} testid="sidebar-toggle">
             <PanelLeft />
@@ -273,6 +282,9 @@ export function Library() {
         <Menu anchor={menu.anchor} title="New" onClose={close} testid="new-menu">
           <MenuRow icon={<FilePlus2 />} onClick={() => { close(); setMaking(true); }} testid="new-notebook">New Notebook…</MenuRow>
           <MenuRow icon={<Presentation />} onClick={() => { close(); void whiteboard(); }} testid="new-whiteboard">New Whiteboard</MenuRow>
+          <MenuBreak />
+          <MenuRow icon={<FileInput />} onClick={() => { close(); void pickAndImportPdf(); }} testid="new-import-pdf">Import PDF…</MenuRow>
+          <MenuRow icon={<ImagePlus />} onClick={() => { close(); void pickAndImportPictures(); }} testid="new-import-pictures">Import Pictures as Notebook…</MenuRow>
           <MenuBreak />
           <MenuRow icon={<PenLine />} keys="Ctrl+Shift+N" onClick={() => { close(); void quickNote(); }} testid="new-quick-note">Quick Note</MenuRow>
           <MenuRow icon={<Sunrise />} keys="Ctrl+T" onClick={() => { close(); void openToday(); }} testid="new-today">Today&apos;s Page</MenuRow>
