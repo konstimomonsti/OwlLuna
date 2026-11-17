@@ -1,0 +1,89 @@
+/* Flashcards, review and the library's Study card. Cards are cream index cards (see .index-card in app.css). */
+
+.deck-head { display: flex; align-items: center; gap: var(--x3); flex-wrap: wrap; }
+.deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--x4); }
+.deck-card { position: relative; display: flex; flex-direction: column; min-height: 150px; padding: 0; }
+.deck-card .face { flex: 1; min-height: 120px; padding: 36px var(--x3) var(--x3); width: 100%; border: 0; background: transparent; text-align: left; display: flex; flex-direction: column; gap: var(--x2); }
+.deck-card .face:hover { background: rgba(232, 176, 35, 0.08); }
+.deck-card .side-name { position: absolute; left: var(--x3); top: 7px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; color: #5A6070; }
+.deck-card .tools { position: absolute; right: 2px; top: 0; display: flex; }
+.deck-card .tools .icon-btn { width: 28px; height: 28px; color: #1B2230; }
+.deck-card .tools .icon-btn svg { width: 15px; height: 15px; }
+.deck-card .due-mark { font-size: 11px; color: #5A6070; margin-top: auto; }
+
+.card-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 24px; font-family: var(--display); font-size: 15px; }
+.card-clip { display: block; max-width: 100%; max-height: 240px; object-fit: contain; align-self: flex-start; background: #fff; border: 1px solid rgba(27, 34, 48, 0.2); border-radius: 2px; }
+
+.card-editor { display: grid; grid-template-columns: 1fr 1fr; gap: var(--x4); }
+.card-editor .side { display: flex; flex-direction: column; gap: var(--x2); min-width: 0; }
+.card-editor textarea.field { min-height: 120px; }
+.card-editor .clip-box { display: flex; flex-direction: column; gap: var(--x2); align-items: flex-start; }
+@media (max-width: 640px) { .card-editor { grid-template-columns: 1fr; } }
+
+/* Review */
+
+.review { width: min(720px, 100%); max-height: 100%; display: flex; flex-direction: column; gap: var(--x4); padding: var(--x5); background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-sheet); box-shadow: 0 12px 40px var(--shade); overflow: hidden; }
+.review-top { display: flex; align-items: center; gap: var(--x3); }
+.review-top .thread { flex: 1; }
+.review-card { padding: var(--x5) var(--x5) var(--x5) var(--x5); min-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: var(--x3); }
+.review-card .rule { height: 1px; background: rgba(27, 34, 48, 0.3); margin: var(--x1) 0; flex: none; }
+.review-card .card-text { font-size: 20px; line-height: 28px; }
+.review-card .card-clip { max-height: 280px; }
+.grades { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--x3); }
+.grade { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.grade .btn { min-height: 42px; }
+.grade .when { text-align: center; font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.review-actions { display: flex; align-items: center; gap: var(--x3); }
+.review-summary { display: flex; flex-direction: column; gap: var(--x3); padding: var(--x5) 0; align-items: flex-start; }
+.review-summary h2 { font-family: var(--display); font-size: 24px; }
+
+/* The library's Study card */
+
+.study-card { display: flex; align-items: center; gap: var(--x4); padding: var(--x3) var(--x4); margin-bottom: var(--x4); }
+.study-card .symbol { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--rule); border-radius: var(--r-plate); flex: none; }
+.study-card .info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.study-card h2 { font-family: var(--display); font-size: 18px; }
+
+/* Recording and replay */
+
+.rec-live { display: inline-flex; align-items: center; gap: var(--x2); padding: 0 var(--x1); }
+.rec-square { display: block; width: 12px; height: 12px; background: var(--tomato); border-radius: 1px; box-shadow: 0 0 0 1.5px var(--ink); animation: rec-blink 1.4s steps(1) infinite; }
+@keyframes rec-blink { 50% { opacity: 0.35; } }
+.rec-time { min-width: 3.4em; color: var(--ink); }
+.recording-row { align-items: center; padding: var(--x1) var(--x2); }
+.recording-row.chosen { background: var(--well); box-shadow: inset 3px 0 0 var(--accent); }
+.recording-row .icon-btn { width: 30px; height: 30px; }
+.recording-row .icon-btn svg { width: 15px; height: 15px; }
+
+.replay-bar { position: absolute; left: 50%; bottom: 74px; transform: translateX(-50%); z-index: 21; display: flex; align-items: center; gap: var(--x2); padding: 4px var(--x2); width: min(720px, calc(100% - 24px)); }
+.editor.zoomed .replay-bar { bottom: 254px; }
+.replay-name { max-width: 110px; }
+.replay-scrub { flex: 1; min-width: 80px; }
+.replay-time { min-width: 6.4em; text-align: center; }
+
+/* Presenting */
+
+.presenter { position: fixed; inset: 0; z-index: 800; display: flex; flex-direction: column; background: var(--desk); }
+.presenter-bar { display: flex; align-items: center; gap: var(--x3); min-height: 48px; padding: 6px var(--x3); background: var(--surface); border-bottom: 1px solid var(--rule); flex: none; }
+.presenter-body { flex: 1; min-height: 0; display: flex; }
+.presenter-stage { flex: 1; min-width: 0; position: relative; background: #000; }
+.presenter-stage > .editor-canvas { position: absolute; inset: 0; }
+.presenter-side { width: 320px; flex: none; display: flex; flex-direction: column; gap: var(--x4); padding: var(--x3); background: var(--surface); border-left: 1px solid var(--rule); overflow-y: auto; }
+.presenter-next img, .presenter-next-blank { display: block; width: 100%; background: #fff; border: 1px solid var(--rule); border-radius: 2px; box-shadow: 0 1px 3px var(--shade); }
+.presenter-next-blank { aspect-ratio: 3 / 4; }
+.presenter-notes { flex: 1; min-height: 120px; display: flex; flex-direction: column; }
+.presenter-notes textarea { flex: 1; resize: none; min-height: 100px; }
+.presenter-clock { font-size: 30px; font-variant-numeric: tabular-nums; }
+
+/* The audience's window */
+
+.audience { position: fixed; inset: 0; background: #000; overflow: hidden; }
+.audience-page { position: absolute; background: #fff; }
+.audience-laser { position: absolute; inset: 0; pointer-events: none; }
+.audience-wait { position: absolute; inset: 0; display: grid; place-items: center; color: #ECE6DA; font-size: 22px; }
+.audience-fullscreen { position: absolute; right: 12px; top: 12px; opacity: 0; transition: opacity var(--standard); }
+.audience:hover .audience-fullscreen, .audience-fullscreen:focus-visible { opacity: 0.85; }
+
+/* Scan from Camera */
+
+.scan-video { width: 100%; max-height: 52vh; background: #000; border-radius: var(--r-plate); object-fit: contain; }
