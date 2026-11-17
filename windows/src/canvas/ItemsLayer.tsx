@@ -12,6 +12,7 @@ import { assetPath } from "../storage/package";
 import { stickerDataURL, stickerNamed } from "./stickers";
 import { faceCSS, LINE_HEIGHT, mathRuns, textLines } from "./textLayout";
 import { capturePointer } from "./pointer";
+import { t } from "../i18n";
 
 const urls = new Map<string, string>();
 const pendingURLs = new Map<string, Promise<string | null>>();
@@ -123,9 +124,9 @@ function TextBox(props: { doc: NotebookDocument; pageID: string; item: TextItem;
     const text = draft;
     const measured = area.current ? Math.ceil(area.current.scrollHeight) : item.h;
     if (text.trim() === "") {
-      props.doc.removeItems(props.pageID, new Set([item.id]), item.string ? "Delete Text" : "Add Text");
+      props.doc.removeItems(props.pageID, new Set([item.id]), item.string ? t("Delete Text") : t("Add Text"));
     } else if (text !== item.string || measured > item.h) {
-      props.doc.updateItem(props.pageID, item.id, "Edit Text", (target) => {
+      props.doc.updateItem(props.pageID, item.id, t("Edit Text"), (target) => {
         if (target.kind !== "text") return;
         const grow = Math.max(measured, target.h) - target.h;
         target.string = text;
@@ -161,7 +162,7 @@ function TextBox(props: { doc: NotebookDocument; pageID: string; item: TextItem;
   }
   const lines = textLines(item);
   const toggle = (index: number) => {
-    props.doc.updateItem(props.pageID, item.id, "Tick", (target) => {
+    props.doc.updateItem(props.pageID, item.id, t("Tick"), (target) => {
       if (target.kind !== "text") return;
       const ticked = new Set(target.checked ?? []);
       if (ticked.has(index)) ticked.delete(index);
@@ -202,7 +203,7 @@ export function linkTitle(item: LinkItem, doc: NotebookDocument): string {
   }
   if (item.target.to === "notebook") return item.target.name;
   const index = doc.pageIndex(item.target.page);
-  return index === -1 ? "Missing page" : `Page ${index + 1}`;
+  return index === -1 ? t("Missing page") : t("Page {number}", { number: index + 1 });
 }
 
 function LinkChip(props: { doc: NotebookDocument; item: LinkItem; hot: boolean; onFollow: (item: LinkItem) => void }) {
@@ -243,7 +244,7 @@ function Tape(props: { item: TapeItem; lifted: boolean; hot: boolean; onToggle: 
       data-hot={props.hot ? "" : undefined}
       data-testid="tape"
       role="button"
-      aria-label={props.lifted ? "Study tape, lifted" : "Study tape"}
+      aria-label={props.lifted ? t("Study tape, lifted") : t("Study tape")}
       aria-pressed={props.lifted}
       onClick={() => props.onToggle(item.id)}
     />
@@ -278,7 +279,7 @@ export const ItemsLayer = memo(function ItemsLayer(props: ItemsLayerProps) {
           case "image": return <Picture key={item.id} doc={props.doc} item={item} />;
           case "sticker": {
             const sticker = stickerNamed(item.name);
-            return sticker ? <img key={item.id} src={stickerDataURL(sticker)} alt={sticker.label} draggable={false} style={frameStyle(item)} data-item={item.id} /> : null;
+            return sticker ? <img key={item.id} src={stickerDataURL(sticker)} alt={t(sticker.label)} draggable={false} style={frameStyle(item)} data-item={item.id} /> : null;
           }
           case "text": return <TextBox key={item.id} doc={props.doc} pageID={props.page.id} item={item} darkPaper={dark} editing={props.editing === item.id} hot={props.hot} onDone={props.onDoneEditing} />;
           case "link": return <LinkChip key={item.id} doc={props.doc} item={item} hot={props.hot} onFollow={props.onFollowLink} />;
@@ -352,7 +353,7 @@ export function ItemFrame(props: {
   const end = () => {
     const state = drag.current;
     drag.current = null;
-    if (state?.moved && draft) props.onCommit(draft, state.grip === "move" ? "Move" : state.grip === "turn" ? "Rotate" : "Resize");
+    if (state?.moved && draft) props.onCommit(draft, state.grip === "move" ? t("Move") : state.grip === "turn" ? t("Rotate") : t("Resize"));
     setDraft(null);
     props.onDraft(null);
   };
@@ -384,7 +385,7 @@ export function ItemFrame(props: {
       {knob("sw", { left: -3, top: h + 3, cursor: "nesw-resize" })}
       <div
         onPointerDown={begin("turn")} onPointerMove={move} onPointerUp={end} onPointerCancel={end}
-        title="Rotate"
+        title={t("Rotate")}
         style={{ position: "absolute", left: w / 2 - 12, top: -38, width: 24, height: 24, display: "grid", placeItems: "center", background: "var(--board)", border: "1.5px solid var(--ink)", borderRadius: 3, cursor: "grab", touchAction: "none", color: "var(--ink)" }}
       >
         <RotateCw style={{ width: 14, height: 14 }} />

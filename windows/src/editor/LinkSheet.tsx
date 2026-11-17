@@ -6,6 +6,7 @@ import { Segmented, Sheet } from "../design/controls";
 import { webAddress, type LinkItem, type LinkTarget } from "../model/notebook";
 import { useApp } from "../state/app";
 import type { NotebookDocument } from "./document";
+import { t, tp } from "../i18n";
 
 type Tab = "page" | "notebook" | "web";
 
@@ -50,7 +51,7 @@ export function LinkSheet(props: LinkSheetProps) {
   );
   const chosen = notebookID ? manifests[notebookID] : undefined;
   const checked = webAddress(address);
-  const problem = tab === "web" && (tried || address.trim() !== "") && !checked ? "That doesn't look like a web address." : tab === "notebook" && tried && !chosen ? "Choose a notebook." : null;
+  const problem = tab === "web" && (tried || address.trim() !== "") && !checked ? t("That doesn't look like a web address.") : tab === "notebook" && tried && !chosen ? t("Choose a notebook.") : null;
 
   const save = () => {
     setTried(true);
@@ -65,17 +66,17 @@ export function LinkSheet(props: LinkSheetProps) {
 
   return (
     <Sheet
-      title={editing ? "Edit Link" : "Add Link"}
+      title={editing ? t("Edit Link") : t("Add Link")}
       onClose={props.onClose}
       testid="link-sheet"
       foot={
         <>
-          <button type="button" className="btn" onClick={props.onClose} data-testid="link-cancel">Cancel</button>
-          <button type="button" className="btn primary" onClick={save} data-testid="link-save">{editing ? "Save" : "Add Link"}</button>
+          <button type="button" className="btn" onClick={props.onClose} data-testid="link-cancel">{t("Cancel")}</button>
+          <button type="button" className="btn primary" onClick={save} data-testid="link-save">{editing ? t("Save") : t("Add Link")}</button>
         </>
       }
     >
-      <Segmented<Tab> label="Link to" value={tab} onChange={setTab} options={[{ value: "page", label: "Page" }, { value: "notebook", label: "Notebook" }, { value: "web", label: "Web" }]} />
+      <Segmented<Tab> label={t("Link to")} value={tab} onChange={setTab} options={[{ value: "page", label: t("Page") }, { value: "notebook", label: t("Notebook") }, { value: "web", label: t("Web") }]} />
 
       {tab === "page" && (
         <div className="link-pages" data-testid="link-pages">
@@ -98,16 +99,16 @@ export function LinkSheet(props: LinkSheetProps) {
                 data-testid="link-notebook"
               >
                 <span className="truncate grow">{manifest.title}</span>
-                <span className="meta">{manifest.kind === "whiteboard" ? "Whiteboard" : `${manifest.pages.length} pages`}</span>
+                <span className="meta">{manifest.kind === "whiteboard" ? t("Whiteboard") : tp(manifest.pages.length, "{count} page", "{count} pages")}</span>
               </button>
             ))}
           </div>
           {chosen && chosen.kind !== "whiteboard" && (
             <div>
-              <label className="label" htmlFor="link-notebook-page">Page (optional)</label>
+              <label className="label" htmlFor="link-notebook-page">{t("Page (optional)")}</label>
               <select id="link-notebook-page" className="field" value={notebookPage} onChange={(event) => setNotebookPage(event.target.value)} data-testid="link-notebook-page">
-                <option value="">Wherever it was left</option>
-                {chosen.pages.map((page, index) => <option key={page.id} value={page.id}>{`Page ${index + 1}`}</option>)}
+                <option value="">{t("Wherever it was left")}</option>
+                {chosen.pages.map((page, index) => <option key={page.id} value={page.id}>{t("Page {number}", { number: index + 1 })}</option>)}
               </select>
             </div>
           )}
@@ -116,7 +117,7 @@ export function LinkSheet(props: LinkSheetProps) {
 
       {tab === "web" && (
         <div>
-          <label className="label" htmlFor="link-address">Web Address</label>
+          <label className="label" htmlFor="link-address">{t("Web Address")}</label>
           <input
             id="link-address"
             className="field"
@@ -132,8 +133,8 @@ export function LinkSheet(props: LinkSheetProps) {
       {problem && <p className="field-error" role="alert" data-testid="link-error">{problem}</p>}
 
       <div>
-        <label className="label" htmlFor="link-label">Label (optional)</label>
-        <input id="link-label" className="field" value={label} placeholder="What the link says" onChange={(event) => setLabel(event.target.value)} data-testid="link-label" />
+        <label className="label" htmlFor="link-label">{t("Label (optional)")}</label>
+        <input id="link-label" className="field" value={label} placeholder={t("What the link says")} onChange={(event) => setLabel(event.target.value)} data-testid="link-label" />
       </div>
     </Sheet>
   );

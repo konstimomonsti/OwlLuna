@@ -10,6 +10,8 @@ import { invoke, isTauri } from "./platform/host";
 // Importing the lock service is what makes locked notebooks ask before they open.
 import "./services/lock";
 import * as appActions from "./state/app";
+import "./i18n/bind";
+import { useLanguage } from "./i18n";
 import { documentIfOpen, loadLibrary, openSettings, openToday, quickNote, saveAll, useApp } from "./state/app";
 
 let launchHandled = false;
@@ -39,7 +41,8 @@ export default function App() {
   const settingsOpen = useApp((state) => state.settingsOpen);
   const calendarOpen = useApp((state) => state.calendarOpen);
   const dark = useDark();
-
+  // Re-renders the whole tree when the language changes; the texts are looked up while rendering.
+  useLanguage();
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
   }, [dark]);

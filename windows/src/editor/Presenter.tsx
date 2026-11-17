@@ -16,6 +16,7 @@ import type { NotebookDocument } from "./document";
 import { EditorCanvas } from "./EditorCanvas";
 import { dropSession, goToPage, sessionFor, setTool } from "./session";
 import { fnv1a } from "../model/ids";
+import { t } from "../i18n";
 
 function typing(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
@@ -110,13 +111,13 @@ export function Presenter(props: { doc: NotebookDocument; startPage: string; pen
           return;
         }
         const made = new WebviewWindow("audience", { url: "index.html#audience", title: "OwlLuna", width: 1280, height: 720 });
-        void made.once("tauri://error", () => notify("The audience window couldn't be opened.", "trouble"));
+        void made.once("tauri://error", () => notify(t("The audience window couldn't be opened."), "trouble"));
       } else {
         const opened = window.open(location.pathname + "#audience", "owlluna-audience");
-        if (!opened) notify("The audience window was blocked. Allow pop-ups for this page.", "trouble");
+        if (!opened) notify(t("The audience window was blocked. Allow pop-ups for this page."), "trouble");
       }
     } catch (error) {
-      notify(`The audience window couldn't be opened: ${error instanceof Error ? error.message : String(error)}`, "trouble");
+      notify(t("The audience window couldn't be opened: {error}", { error: error instanceof Error ? error.message : String(error) }), "trouble");
     }
   };
 
@@ -125,13 +126,13 @@ export function Presenter(props: { doc: NotebookDocument; startPage: string; pen
       const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
       const audience = await WebviewWindow.getByLabel("audience");
       if (!audience) {
-        notify("Open the audience window first.");
+        notify(t("Open the audience window first."));
         return;
       }
       await audience.setFullscreen(!fullscreen);
       setFullscreen(!fullscreen);
     } catch (error) {
-      notify(`Full screen couldn't be changed: ${error instanceof Error ? error.message : String(error)}`, "trouble");
+      notify(t("Full screen couldn't be changed: {error}", { error: error instanceof Error ? error.message : String(error) }), "trouble");
     }
   };
 
@@ -164,7 +165,7 @@ export function Presenter(props: { doc: NotebookDocument; startPage: string; pen
     if (!draft) return;
     pending.current = null;
     if ((doc.page(draft.pageID)?.notes ?? "") !== draft.text) {
-      doc.updatePage(draft.pageID, "Edit Notes", (target) => { if (draft.text) target.notes = draft.text; else delete target.notes; });
+      doc.updatePage(draft.pageID, t("Edit Notes"), (target) => { if (draft.text) target.notes = draft.text; else delete target.notes; });
     }
   }, [doc]);
   // Notes not yet saved are kept when the page turns or the presenter ends.
@@ -200,19 +201,19 @@ export function Presenter(props: { doc: NotebookDocument; startPage: string; pen
   return (
     <div className="presenter" data-testid="presenter" data-page={page.id}>
       <header className="presenter-bar">
-        <span className="meta" data-testid="presenter-page">Page {index + 1} of {pages.length}</span>
+        <span className="meta" data-testid="presenter-page">{t("Page {page} of {total}", { page: index + 1, total: pages.length })}</span>
         <div className="bar-group">
-          <IconButton label="Previous Page" disabled={index === 0} onClick={() => go(-1)} testid="presenter-prev"><ChevronLeft /></IconButton>
-          <IconButton label="Next Page" disabled={!nextID} onClick={() => go(1)} testid="presenter-next"><ChevronRight /></IconButton>
+          <IconButton label={t("Previous Page")} disabled={index === 0} onClick={() => go(-1)} testid="presenter-prev"><ChevronLeft /></IconButton>
+          <IconButton label={t("Next Page")} disabled={!nextID} onClick={() => go(1)} testid="presenter-next"><ChevronRight /></IconButton>
         </div>
         <div className="bar-group">
-          <IconButton label="Laser Pointer" on={laser} onClick={() => setTool(session, { kind: "laser" })} testid="presenter-laser"><Pointer /></IconButton>
-          <IconButton label="Write on the Page" on={!laser} disabled={!writing} onClick={() => writing && setTool(session, writing)} testid="presenter-pen"><PenLine /></IconButton>
+          <IconButton label={t("Laser Pointer")} on={laser} onClick={() => setTool(session, { kind: "laser" })} testid="presenter-laser"><Pointer /></IconButton>
+          <IconButton label={t("Write on the Page")} on={!laser} disabled={!writing} onClick={() => writing && setTool(session, writing)} testid="presenter-pen"><PenLine /></IconButton>
         </div>
         <div className="grow" />
-        <button type="button" className="btn in-bar small" onClick={() => void openAudience()} data-testid="open-audience"><MonitorUp /> Open Audience Window</button>
-        {isTauri && <IconButton label="Audience Full Screen" on={fullscreen} onClick={() => void toggleFullscreen()} testid="audience-fullscreen-toggle"><Maximize /></IconButton>}
-        <button type="button" className="btn primary small" onClick={finish} data-testid="presenter-done">Done</button>
+        <button type="button" className="btn in-bar small" onClick={() => void openAudience()} data-testid="open-audience"><MonitorUp /> {t("Open Audience Window")}</button>
+        {isTauri && <IconButton label={t("Audience Full Screen")} on={fullscreen} onClick={() => void toggleFullscreen()} testid="audience-fullscreen-toggle"><Maximize /></IconButton>}
+        <button type="button" className="btn primary small" onClick={finish} data-testid="presenter-done">{t("Done")}</button>
       </header>
       <div className="presenter-body">
         <div
@@ -226,33 +227,33 @@ export function Presenter(props: { doc: NotebookDocument; startPage: string; pen
         </div>
         <aside className="presenter-side">
           <section>
-            <span className="label">Next</span>
+            <span className="label">{t("Next")}</span>
             {nextID ? (
-              <div className="presenter-next" data-testid="presenter-next-page">{next ? <img src={next} alt="The next page" draggable={false} /> : <div className="presenter-next-blank" />}</div>
+              <div className="presenter-next" data-testid="presenter-next-page">{next ? <img src={next} alt={t("The next page")} draggable={false} /> : <div className="presenter-next-blank" />}</div>
             ) : (
-              <p className="secondary" data-testid="presenter-last">This is the last page.</p>
+              <p className="secondary" data-testid="presenter-last">{t("This is the last page.")}</p>
             )}
           </section>
           <section className="presenter-notes">
-            <span className="label">Notes</span>
+            <span className="label">{t("Notes")}</span>
             <textarea
               className="field"
               value={notes}
-              placeholder="Notes only you can see"
+              placeholder={t("Notes only you can see")}
               onChange={(event) => { setNotes(event.target.value); pending.current = { pageID: page.id, text: event.target.value }; }}
               onBlur={saveNotes}
               data-testid="presenter-notes"
             />
           </section>
           <section className="presenter-timer">
-            <span className="label">Time</span>
+            <span className="label">{t("Time")}</span>
             <div className="row">
               <span className="display presenter-clock" data-testid="presenter-timer">{formatTimer(timerElapsed(timer, now))}</span>
               <div className="grow" />
-              <IconButton label={timer.since === null ? "Resume Timer" : "Pause Timer"} onClick={() => setTimer((t) => (t.since === null ? resumeTimer(t, Date.now()) : pauseTimer(t, Date.now())))} testid="timer-toggle">
+              <IconButton label={timer.since === null ? t("Resume Timer") : t("Pause Timer")} onClick={() => setTimer((current) => (current.since === null ? resumeTimer(current, Date.now()) : pauseTimer(current, Date.now())))} testid="timer-toggle">
                 {timer.since === null ? <Play /> : <Pause />}
               </IconButton>
-              <IconButton label="Reset Timer" onClick={() => setTimer((t) => resetTimer(t, Date.now()))} testid="timer-reset"><RotateCcw /></IconButton>
+              <IconButton label={t("Reset Timer")} onClick={() => setTimer((current) => resetTimer(current, Date.now()))} testid="timer-reset"><RotateCcw /></IconButton>
             </div>
           </section>
         </aside>

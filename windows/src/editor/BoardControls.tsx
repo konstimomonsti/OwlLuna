@@ -12,6 +12,7 @@ import type { NotebookDocument } from "./document";
 import type { EditorCanvasHandle } from "./EditorCanvas";
 import type { Session } from "./session";
 import { capturePointer } from "../canvas/pointer";
+import { t } from "../i18n";
 
 export const START_VIEW = { x: -40, y: -40 };
 
@@ -133,14 +134,14 @@ export function BoardControls(props: { doc: NotebookDocument; session: Session; 
         </div>
       )}
       <div className="board bar-row">
-        <IconButton label="Zoom Out" onClick={() => canvas.current?.zoomAt(0.8)} disabled={state.zoom <= BOARD_MIN_ZOOM + 0.0005} testid="board-zoom-out"><Minus /></IconButton>
-        <button type="button" className="btn flat small meta zoom-readout" title="Reset to 100%" onClick={() => canvas.current?.zoomAt(1 / state.zoom)} data-testid="board-zoom-reset">
+        <IconButton label={t("Zoom Out")} onClick={() => canvas.current?.zoomAt(0.8)} disabled={state.zoom <= BOARD_MIN_ZOOM + 0.0005} testid="board-zoom-out"><Minus /></IconButton>
+        <button type="button" className="btn flat small meta zoom-readout" title={t("Reset to 100%")} onClick={() => canvas.current?.zoomAt(1 / state.zoom)} data-testid="board-zoom-reset">
           {Math.round(state.zoom * 100)}%
         </button>
-        <IconButton label="Zoom In" onClick={() => canvas.current?.zoomAt(1.25)} disabled={state.zoom >= BOARD_MAX_ZOOM - 0.0005} testid="board-zoom-in"><Plus /></IconButton>
+        <IconButton label={t("Zoom In")} onClick={() => canvas.current?.zoomAt(1.25)} disabled={state.zoom >= BOARD_MAX_ZOOM - 0.0005} testid="board-zoom-in"><Plus /></IconButton>
         <span className="tray-rule" />
-        <IconButton label="Show Everything (Ctrl+1)" onClick={() => showEverything(doc, session, canvas.current?.viewSize() ?? { w: 0, h: 0 })} testid="board-show-everything"><Maximize2 /></IconButton>
-        <IconButton label="Back to Start (Home)" onClick={() => backToStart(session)} testid="board-back-to-start"><House /></IconButton>
+        <IconButton label={t("Show Everything (Ctrl+1)")} onClick={() => showEverything(doc, session, canvas.current?.viewSize() ?? { w: 0, h: 0 })} testid="board-show-everything"><Maximize2 /></IconButton>
+        <IconButton label={t("Back to Start (Home)")} onClick={() => backToStart(session)} testid="board-back-to-start"><House /></IconButton>
       </div>
     </div>
   );

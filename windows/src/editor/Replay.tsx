@@ -11,56 +11,57 @@ import { notify } from "../state/app";
 import type { NotebookDocument } from "./document";
 import { clock, pageAtMoment, replayMoment } from "./replayMath";
 import { goToPage, type Session } from "./session";
+import { locale, t } from "../i18n";
 
-const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+const dateFormat = { format: (value: number) => new Intl.DateTimeFormat(locale(), { dateStyle: "medium", timeStyle: "short" }).format(value) };
 
 export function RecordingsPanel(props: { doc: NotebookDocument; session: Session; version: number; playing: string | null; onPlay: (recording: Recording) => void; onStop: () => void }) {
   const { doc, session } = props;
   const recordings = doc.manifest.recordings ?? [];
 
   const rename = async (recording: Recording) => {
-    const name = await ask({ title: "Rename Recording", confirm: "Rename", value: recording.name });
+    const name = await ask({ title: t("Rename Recording"), confirm: t("Rename"), value: recording.name });
     if (name !== null) renameRecording(doc, recording.id, name);
   };
   const remove = async (recording: Recording) => {
-    if (!(await confirm({ title: `Delete “${recording.name}”?`, message: "The audio is deleted from the notebook. The writing stays.", confirm: "Delete", destructive: true }))) return;
+    if (!(await confirm({ title: t("Delete “{name}”?", { name: recording.name }), message: t("The audio is deleted from the notebook. The writing stays."), confirm: t("Delete"), destructive: true }))) return;
     if (props.playing === recording.id) props.onStop();
     await deleteRecording(doc, recording);
   };
   const exportAudio = async (recording: Recording) => {
     try {
       const data = await doc.fs.read(recordingPath(doc.id, recording.file));
-      if (!data) throw new Error("The audio file is missing.");
+      if (!data) throw new Error(t("The audio file is missing."));
       const extension = recording.file.split(".").pop() ?? "webm";
-      await saveFile(`${safeFileName(recording.name, "Recording")}.${extension}`, data, { name: "Audio", extensions: [extension] });
+      await saveFile(`${safeFileName(recording.name, "Recording")}.${extension}`, data, { name: t("Audio"), extensions: [extension] });
     } catch (error) {
-      notify(`The audio couldn't be exported: ${error instanceof Error ? error.message : String(error)}`, "trouble");
+      notify(t("The audio couldn't be exported: {error}", { error: error instanceof Error ? error.message : String(error) }), "trouble");
     }
   };
 
   return (
     <aside className="side-panel right recordings-panel" data-testid="recordings-panel">
       <div className="side-head">
-        <h3 className="display grow" style={{ fontSize: 16 }}>Recordings</h3>
-        <IconButton label="Close" onClick={() => session.setState({ panel: null })} testid="recordings-close"><X /></IconButton>
+        <h3 className="display grow" style={{ fontSize: 16 }}>{t("Recordings")}</h3>
+        <IconButton label={t("Close")} onClick={() => session.setState({ panel: null })} testid="recordings-close"><X /></IconButton>
       </div>
       <div className="side-body">
         {recordings.length === 0 ? (
-          <EmptyPlate icon={<Mic />} title="No recordings">Press the microphone in the bar to record while you write.</EmptyPlate>
+          <EmptyPlate icon={<Mic />} title={t("No recordings")}>{t("Press the microphone in the bar to record while you write.")}</EmptyPlate>
         ) : (
           <div className="ledger">
             {[...recordings].reverse().map((recording) => (
               <div key={recording.id} className={`ledger-row recording-row${props.playing === recording.id ? " chosen" : ""}`} data-testid="recording-row" data-recording={recording.id}>
-                <IconButton label={props.playing === recording.id ? "Stop Replay" : "Play"} onClick={() => (props.playing === recording.id ? props.onStop() : props.onPlay(recording))} testid="recording-play">
+                <IconButton label={props.playing === recording.id ? t("Stop Replay") : t("Play")} onClick={() => (props.playing === recording.id ? props.onStop() : props.onPlay(recording))} testid="recording-play">
                   {props.playing === recording.id ? <Pause /> : <Play />}
                 </IconButton>
                 <div className="grow">
                   <div className="truncate" style={{ fontWeight: 600 }} data-testid="recording-name">{recording.name}</div>
                   <div className="meta">{dateFormat.format(recording.startedAt)} · {clock(recording.duration / 1000)}</div>
                 </div>
-                <IconButton label="Rename" onClick={() => void rename(recording)} testid="recording-rename"><Pencil /></IconButton>
-                <IconButton label="Export Audio" onClick={() => void exportAudio(recording)} testid="recording-export"><Download /></IconButton>
-                <IconButton label="Delete" tone="tomato" onClick={() => void remove(recording)} testid="recording-delete"><Trash2 /></IconButton>
+                <IconButton label={t("Rename")} onClick={() => void rename(recording)} testid="recording-rename"><Pencil /></IconButton>
+                <IconButton label={t("Export Audio")} onClick={() => void exportAudio(recording)} testid="recording-export"><Download /></IconButton>
+                <IconButton label={t("Delete")} tone="tomato" onClick={() => void remove(recording)} testid="recording-delete"><Trash2 /></IconButton>
               </div>
             ))}
           </div>
@@ -135,7 +136,7 @@ export const ReplayBar = forwardRef<ReplayHandle, { doc: NotebookDocument; sessi
       const data = await doc.fs.read(recordingPath(doc.id, recording.file));
       if (!live) return;
       if (!data) {
-        setProblem("The audio file is missing.");
+        setProblem(t("The audio file is missing."));
         return;
       }
       const type = recording.file.endsWith(".ogg") ? "audio/ogg" : recording.file.endsWith(".m4a") ? "audio/mp4" : "audio/webm";
@@ -158,7 +159,7 @@ export const ReplayBar = forwardRef<ReplayHandle, { doc: NotebookDocument; sessi
     element.addEventListener("pause", () => setPlaying(false));
     element.addEventListener("ended", () => { setPlaying(false); syncRef.current(true); });
     element.addEventListener("seeked", () => syncRef.current(false));
-    element.addEventListener("error", () => { if (live && element.src) setProblem("The audio couldn't be played."); });
+    element.addEventListener("error", () => { if (live && element.src) setProblem(t("The audio couldn't be played.")); });
     const tick = () => {
       if (!element.paused) syncRef.current(false);
       frame = requestAnimationFrame(tick);
@@ -187,15 +188,15 @@ export const ReplayBar = forwardRef<ReplayHandle, { doc: NotebookDocument; sessi
     if (!element) return;
     if (element.paused) {
       if (element.ended || element.currentTime >= total - 0.05) element.currentTime = 0;
-      void element.play().catch(() => setProblem("The audio couldn't be played."));
+      void element.play().catch(() => setProblem(t("The audio couldn't be played.")));
     } else {
       element.pause();
     }
   };
 
   return (
-    <div className="replay-bar board" role="toolbar" aria-label="Replay" data-testid="replay-bar">
-      <IconButton label={playing ? "Pause" : "Play"} onClick={toggle} disabled={problem !== null} testid="replay-toggle">{playing ? <Pause /> : <Play />}</IconButton>
+    <div className="replay-bar board" role="toolbar" aria-label={t("Replay")} data-testid="replay-bar">
+      <IconButton label={playing ? t("Pause") : t("Play")} onClick={toggle} disabled={problem !== null} testid="replay-toggle">{playing ? <Pause /> : <Play />}</IconButton>
       <span className="meta replay-name truncate" title={recording.name}>{problem ?? recording.name}</span>
       <input
         className="replay-scrub"
@@ -204,7 +205,7 @@ export const ReplayBar = forwardRef<ReplayHandle, { doc: NotebookDocument; sessi
         max={Math.max(Math.round(total * 1000), 1)}
         step={50}
         value={Math.round(seconds * 1000)}
-        aria-label="Position"
+        aria-label={t("Position")}
         onChange={(event) => {
           const element = audio.current;
           if (!element) return;
@@ -215,8 +216,8 @@ export const ReplayBar = forwardRef<ReplayHandle, { doc: NotebookDocument; sessi
         data-testid="replay-scrubber"
       />
       <span className="meta replay-time" data-testid="replay-time">{clock(seconds)} / {clock(total)}</span>
-      <Segmented label="Speed" value={speed} onChange={setSpeed} options={speeds.map((value) => ({ value, label: `${value}x` }))} />
-      <IconButton label="Close Replay" onClick={props.onClose} testid="replay-close"><X /></IconButton>
+      <Segmented label={t("Speed")} value={speed} onChange={setSpeed} options={speeds.map((value) => ({ value, label: `${value}x` }))} />
+      <IconButton label={t("Close Replay")} onClick={props.onClose} testid="replay-close"><X /></IconButton>
     </div>
   );
 });

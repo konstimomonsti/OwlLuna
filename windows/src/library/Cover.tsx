@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { manifestThumbnailURL } from "../canvas/thumbnail";
+import { t } from "../i18n";
 import { seededRandom } from "../model/ids";
 import { clothHex, risoHex, risoPaperStock, type CoverSpec, type Manifest } from "../model/notebook";
 import { useApp } from "../state/app";
@@ -58,7 +59,7 @@ export function Cover(props: { title: string; cover: CoverSpec; whiteboard?: boo
   const picture = useFirstPage(props.manifest, cover.style === "firstPage" && !locked);
   const print = cover.style === "print";
   return (
-    <svg className={props.className ?? "cover"} viewBox="0 0 300 400" role="img" aria-label={locked ? `${props.title}, locked` : props.title} preserveAspectRatio="xMidYMid slice" data-testid="cover">
+    <svg className={props.className ?? "cover"} viewBox="0 0 300 400" role="img" aria-label={locked ? t("{title}, locked", { title: props.title }) : props.title} preserveAspectRatio="xMidYMid slice" data-testid="cover">
       {print ? (
         <PrintCover title={props.title} cover={cover} whiteboard={props.whiteboard} locked={locked} />
       ) : picture ? (
@@ -122,7 +123,7 @@ function ClothCover(props: { id: string; title: string; cover: CoverSpec; whiteb
       <rect x="71" y={labelY + 9} width="188" height={labelH - 18} fill="none" stroke={INK} strokeOpacity="0.7" strokeWidth="1" />
       {props.locked && <Padlock x={240} y={labelY + 22} colour={INK} />}
       {props.whiteboard && (
-        <text x="165" y={labelY + 30} textAnchor="middle" fontFamily="Archivo, sans-serif" fontSize="10" fontWeight="700" letterSpacing="2.5" fill="#5A6070">WHITEBOARD</text>
+        <text x="165" y={labelY + 30} textAnchor="middle" fontFamily="Archivo, sans-serif" fontSize="10" fontWeight="700" letterSpacing="2.5" fill="#5A6070">{t("Whiteboard").toUpperCase()}</text>
       )}
       <text textAnchor="middle" fontFamily="Fraunces, Georgia, serif" fontSize="25" fontWeight="600" fill={INK}>
         {lines.map((line, index) => (

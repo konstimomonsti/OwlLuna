@@ -141,3 +141,12 @@ input[type="range"] { accent-color: var(--accent); }
 .book-cell .book { width: 100%; }
 .book-more { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; background: var(--board); border: 1px solid var(--hairline); opacity: 0; transition: opacity var(--quick); }
 .book-cell:hover .book-more, .book-more:focus-visible { opacity: 1; }
+
+/* Translated texts run longer (German especially): labels may wrap, foots and rows may break onto a second line. */
+.btn { max-width: 100%; }
+.sheet-foot { flex-wrap: wrap; }
+.settings-row { flex-wrap: wrap; }
+.settings-row .grow { flex-basis: 12em; }
+.segmented { flex-wrap: wrap; max-width: 100%; }
+.segmented button { white-space: normal; }
+.editor-bar { flex-wrap: wrap; }

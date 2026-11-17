@@ -7,6 +7,7 @@ mod hello;
 mod ink;
 mod jumplist;
 mod ocr;
+mod onenote;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -55,6 +56,14 @@ pub fn run() {
             hello::hello_available,
             hello::hello_verify,
             appinfo::app_info,
+            onenote::onenote_available,
+            onenote::onenote_hierarchy,
+            onenote::onenote_local_notebooks,
+            onenote::onenote_open_notebook,
+            onenote::onenote_page,
+            onenote::onenote_publish_pdf,
+            onenote::onenote_cleanup,
+            onenote::onenote_release,
         ])
         .run(tauri::generate_context!())
         .expect("error while running OwlLuna");

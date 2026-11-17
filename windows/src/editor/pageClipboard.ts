@@ -7,6 +7,7 @@ import { duplicatedPage, type Background, type Page } from "../model/notebook";
 import { addAsset, assetPath } from "../storage/package";
 import { extensionOf } from "./actions";
 import type { NotebookDocument } from "./document";
+import { t } from "../i18n";
 
 interface HeldPages {
   notebook: string;
@@ -59,6 +60,6 @@ export async function pastePages(doc: NotebookDocument, afterID: string | null):
     inks.set(fresh.id, strokes.map((stroke) => ({ ...stroke, id: uuid() })));
   }
   const at = afterID ? doc.pageIndex(afterID) + 1 : doc.manifest.pages.length;
-  doc.insertPages(at, made, inks, made.length === 1 ? "Paste Page" : "Paste Pages");
+  doc.insertPages(at, made, inks, made.length === 1 ? t("Paste Page") : t("Paste Pages"));
   return made;
 }

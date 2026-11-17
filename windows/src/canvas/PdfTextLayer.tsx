@@ -10,6 +10,8 @@ import { uuid } from "../model/ids";
 import type { Rect } from "../model/ink";
 import { highlightHex, textHighlights, type Page, type TextHighlight, type TextMark } from "../model/notebook";
 import { bandsOf, pdfTextBoxes, type TextBox } from "./pdfText";
+import { t } from "../i18n";
+import { swatchName } from "../i18n/names";
 
 let measurer: CanvasRenderingContext2D | null = null;
 
@@ -62,7 +64,7 @@ export function PdfTextLayer(props: { doc: NotebookDocument; page: Page; zoom: n
   const highlight = (color: TextHighlight) => {
     if (!bar || !bar.text) return;
     const mark: TextMark = { id: uuid(), color, rects: bar.bands.map((band) => [band.x, band.y, band.w, band.h]), text: bar.text };
-    doc.updatePage(page.id, "Highlight", (draft) => { draft.marks = [...(draft.marks ?? []), mark]; });
+    doc.updatePage(page.id, t("Highlight"), (draft) => { draft.marks = [...(draft.marks ?? []), mark]; });
     window.getSelection()?.removeAllRanges();
     setBar(null);
   };
@@ -123,15 +125,15 @@ export function PdfTextLayer(props: { doc: NotebookDocument; page: Page; zoom: n
           onPointerDown={(event) => event.preventDefault()}
           onMouseDown={(event) => event.preventDefault()}
         >
-          <button type="button" className="btn flat small" onClick={() => copy(bar.text)} data-testid="select-copy"><Copy /> Copy</button>
+          <button type="button" className="btn flat small" onClick={() => copy(bar.text)} data-testid="select-copy"><Copy /> {t("Copy")}</button>
           {textHighlights.map((color) => (
             <button
               key={color}
               type="button"
               className="swatch small"
               style={{ background: highlightHex[color] }}
-              title={`Highlight ${color}`}
-              aria-label={`Highlight ${color}`}
+              title={t("Highlight {color}", { color: swatchName(color) })}
+              aria-label={t("Highlight {color}", { color: swatchName(color) })}
               onClick={() => highlight(color)}
               data-testid={`select-highlight-${color}`}
             />
@@ -140,19 +142,19 @@ export function PdfTextLayer(props: { doc: NotebookDocument; page: Page; zoom: n
         document.body,
       )}
       {markMenu && (
-        <Menu anchor={{ x: markMenu.x, y: markMenu.y }} title="Highlight" onClose={() => setMarkMenu(null)} testid="mark-menu">
-          <MenuRow icon={<Copy />} onClick={() => { copy(markMenu.mark.text); setMarkMenu(null); }} testid="mark-copy">Copy Text</MenuRow>
+        <Menu anchor={{ x: markMenu.x, y: markMenu.y }} title={t("Highlight")} onClose={() => setMarkMenu(null)} testid="mark-menu">
+          <MenuRow icon={<Copy />} onClick={() => { copy(markMenu.mark.text); setMarkMenu(null); }} testid="mark-copy">{t("Copy Text")}</MenuRow>
           <MenuRow
             icon={<Trash2 />}
             destructive
             onClick={() => {
               const id = markMenu.mark.id;
               setMarkMenu(null);
-              doc.updatePage(page.id, "Remove Highlight", (draft) => { draft.marks = (draft.marks ?? []).filter((mark) => mark.id !== id); });
+              doc.updatePage(page.id, t("Remove Highlight"), (draft) => { draft.marks = (draft.marks ?? []).filter((mark) => mark.id !== id); });
             }}
             testid="mark-remove"
           >
-            Remove Highlight
+            {t("Remove Highlight")}
           </MenuRow>
         </Menu>
       )}

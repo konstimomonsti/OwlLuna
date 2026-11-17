@@ -11,6 +11,7 @@ import type { NotebookDocument } from "./document";
 import { dropIndex } from "./pageOrder";
 import { copyPages, hasHeldPages, pastePages } from "./pageClipboard";
 import { goToPage, type Session } from "./session";
+import { locale, t, tp } from "../i18n";
 
 const WIDTH = 220;
 
@@ -57,7 +58,7 @@ function Thumb(props: {
       onDragOver={props.onDragOver}
       onDragEnd={props.onDragEnd}
       onDrop={props.onDrop}
-      aria-label={`Page ${props.number}`}
+      aria-label={t("Page {number}", { number: props.number })}
       aria-current={props.current}
     >
       {url ? <img className="thumb-face" src={url} alt="" draggable={false} /> : <div className="thumb-face" style={{ aspectRatio: String(aspect) }} />}
@@ -71,7 +72,7 @@ function Thumb(props: {
 function formatDay(key: string): string {
   const [year, month, day] = key.split("-").map(Number);
   if (!year || !month || !day) return key;
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  return new Date(year, month - 1, day).toLocaleDateString(locale(), { day: "numeric", month: "short" });
 }
 
 export function Navigator(props: { doc: NotebookDocument; session: Session; version: number }) {
@@ -117,7 +118,7 @@ export function Navigator(props: { doc: NotebookDocument; session: Session; vers
     const fresh = newPage(doc.manifest.defaults, model && !model.edgeless
       ? { background: model.background.kind === "template" ? model.background : { kind: "template", template: doc.manifest.defaults.template }, paperColor: model.paperColor, size: { ...model.size } }
       : {});
-    doc.insertPages(0, [fresh], new Map(), "Add Page");
+    doc.insertPages(0, [fresh], new Map(), t("Add Page"));
     return fresh;
   };
 
@@ -127,7 +128,7 @@ export function Navigator(props: { doc: NotebookDocument; session: Session; vers
       doc.movePage(moving[0], at);
     } else {
       const set = new Set(moving);
-      doc.transact("Move Pages", (draft) => {
+      doc.transact(t("Move Pages"), (draft) => {
         const all = draft.manifest.pages;
         const taken = all.filter((page) => set.has(page.id));
         const rest = all.filter((page) => !set.has(page.id));
@@ -146,9 +147,9 @@ export function Navigator(props: { doc: NotebookDocument; session: Session; vers
     }
     if (busy) {
       const sure = await confirm({
-        title: ids.length === 1 ? "Delete this page?" : `Delete ${ids.length} pages?`,
-        message: "Its writing and items go with it. You can undo this.",
-        confirm: "Delete",
+        title: ids.length === 1 ? t("Delete this page?") : t("Delete {count} pages?", { count: ids.length }),
+        message: t("Its writing and items go with it. You can undo this."),
+        confirm: t("Delete"),
         destructive: true,
       });
       if (!sure) return;
@@ -165,9 +166,9 @@ export function Navigator(props: { doc: NotebookDocument; session: Session; vers
   return (
     <aside className="side-panel navigator" data-testid="navigator">
       <div className="side-head">
-        <h3 className="display grow" style={{ fontSize: 16 }}>Pages</h3>
-        <IconButton label="Add Page After This One" onClick={() => { const added = doc.addPage(state.currentPage); goToPage(session, added.id); }} testid="navigator-add"><Plus /></IconButton>
-        <IconButton label="Close" onClick={() => session.setState({ panel: null })} testid="navigator-close"><X /></IconButton>
+        <h3 className="display grow" style={{ fontSize: 16 }}>{t("Pages")}</h3>
+        <IconButton label={t("Add Page After This One")} onClick={() => { const added = doc.addPage(state.currentPage); goToPage(session, added.id); }} testid="navigator-add"><Plus /></IconButton>
+        <IconButton label={t("Close")} onClick={() => session.setState({ panel: null })} testid="navigator-close"><X /></IconButton>
       </div>
       <div
         className="side-body"
@@ -213,28 +214,28 @@ export function Navigator(props: { doc: NotebookDocument; session: Session; vers
       </div>
 
       {menu && (
-        <Menu anchor={menu.anchor} title={menu.ids.length > 1 ? `${menu.ids.length} Pages` : `Page ${firstIndex + 1}`} onClose={() => setMenu(null)} testid="navigator-menu">
-          <MenuRow onClick={() => { setMenu(null); const added = addAt(firstIndex); goToPage(session, added.id); }} testid="page-add-before">Add Page Before</MenuRow>
-          <MenuRow onClick={() => { setMenu(null); const added = doc.addPage(pages[lastIndex].id); goToPage(session, added.id); }} testid="page-add-after">Add Page After</MenuRow>
-          <MenuRow onClick={() => { setMenu(null); void (async () => { for (const id of [...menuIds].reverse()) await doc.duplicatePage(id); })(); }} testid="page-duplicate">Duplicate</MenuRow>
+        <Menu anchor={menu.anchor} title={menu.ids.length > 1 ? t("{count} Pages", { count: menu.ids.length }) : t("Page {number}", { number: firstIndex + 1 })} onClose={() => setMenu(null)} testid="navigator-menu">
+          <MenuRow onClick={() => { setMenu(null); const added = addAt(firstIndex); goToPage(session, added.id); }} testid="page-add-before">{t("Add Page Before")}</MenuRow>
+          <MenuRow onClick={() => { setMenu(null); const added = doc.addPage(pages[lastIndex].id); goToPage(session, added.id); }} testid="page-add-after">{t("Add Page After")}</MenuRow>
+          <MenuRow onClick={() => { setMenu(null); void (async () => { for (const id of [...menuIds].reverse()) await doc.duplicatePage(id); })(); }} testid="page-duplicate">{t("Duplicate")}</MenuRow>
           <MenuRow
             chosen={bookmarked}
-            onClick={() => { setMenu(null); for (const id of menuIds) doc.updatePage(id, bookmarked ? "Remove Bookmark" : "Bookmark", (draft) => { if (bookmarked) delete draft.bookmark; else draft.bookmark = true; }); }}
+            onClick={() => { setMenu(null); for (const id of menuIds) doc.updatePage(id, bookmarked ? t("Remove Bookmark") : t("Bookmark"), (draft) => { if (bookmarked) delete draft.bookmark; else draft.bookmark = true; }); }}
             testid="page-bookmark"
           >
-            Bookmark
+            {t("Bookmark")}
           </MenuRow>
           <MenuBreak />
-          <MenuRow onClick={() => { setMenu(null); void copyPages(doc, menuIds).then((count) => notify(count === 1 ? "Page copied." : `${count} pages copied.`)); }} testid="page-copy">Copy Page</MenuRow>
+          <MenuRow onClick={() => { setMenu(null); void copyPages(doc, menuIds).then((count) => notify(tp(count, "Page copied.", "{count} pages copied."))); }} testid="page-copy">{t("Copy Page")}</MenuRow>
           <MenuRow
             disabled={!hasHeldPages()}
-            onClick={() => { setMenu(null); void pastePages(doc, pages[lastIndex].id).then((made) => { if (made[0]) goToPage(session, made[0].id); }).catch(() => notify("Those pages couldn't be pasted.", "trouble")); }}
+            onClick={() => { setMenu(null); void pastePages(doc, pages[lastIndex].id).then((made) => { if (made[0]) goToPage(session, made[0].id); }).catch(() => notify(t("Those pages couldn't be pasted."), "trouble")); }}
             testid="page-paste"
           >
-            Paste Page
+            {t("Paste Page")}
           </MenuRow>
           <MenuBreak />
-          <MenuRow destructive onClick={() => { const ids = menuIds; setMenu(null); void remove(ids); }} testid="page-delete">Delete</MenuRow>
+          <MenuRow destructive onClick={() => { const ids = menuIds; setMenu(null); void remove(ids); }} testid="page-delete">{t("Delete")}</MenuRow>
         </Menu>
       )}
     </aside>

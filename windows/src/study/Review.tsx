@@ -10,6 +10,7 @@ import type { FS } from "../platform/fs";
 import { CardFace } from "./CardFace";
 import { ensureCards, gradeCard, sittingKeys, useCards } from "./cardStore";
 import { answer, currentKey, intervalLabel, isFinished, progress, splitKey, startQueue, studiedCount, type Queue } from "./queue";
+import { t, tp } from "../i18n";
 
 export function Review(props: {
   fs: FS;
@@ -79,65 +80,66 @@ export function Review(props: {
 
   return createPortal(
     <div className="scrim dim" style={{ zIndex: 960 }}>
-      <div className="review" role="dialog" aria-modal="true" aria-label="Review" data-testid="review">
+      <div className="review" role="dialog" aria-modal="true" aria-label={t("Review")} data-testid="review">
         <div className="review-top">
-          <Thread value={queue ? progress(queue) : 0} label="Cards remembered" />
+          <Thread value={queue ? progress(queue) : 0} label={t("Cards remembered")} />
           <span className="meta" data-testid="review-progress">{queue ? `${studiedCount(queue)} / ${queue.total}` : ""}</span>
-          <IconButton label="Leave (Esc)" onClick={props.onClose} testid="review-close"><X /></IconButton>
+          <IconButton label={t("Leave (Esc)")} onClick={props.onClose} testid="review-close"><X /></IconButton>
         </div>
 
-        {queue === null && <p className="secondary">Opening the cards…</p>}
+        {queue === null && <p className="secondary">{t("Opening the cards…")}</p>}
 
         {queue !== null && queue.total === 0 && (
           <div className="review-summary" data-testid="review-empty">
-            <h2>Nothing to study</h2>
-            <p className="secondary">No cards are due today.</p>
-            <button type="button" className="btn primary" onClick={props.onClose} data-testid="review-done">Done</button>
+            <h2>{t("Nothing to study")}</h2>
+            <p className="secondary">{t("No cards are due today.")}</p>
+            <button type="button" className="btn primary" onClick={props.onClose} data-testid="review-done">{t("Done")}</button>
           </div>
         )}
 
         {finished && queue.total > 0 && (
           <div className="review-summary" data-testid="review-summary">
-            <h2>Finished</h2>
+            <h2>{t("Finished")}</h2>
             <p>
-              You studied {queue.total === 1 ? "1 card" : `${queue.total} cards`}
-              {queue.again > 0 ? `, and ${queue.again === 1 ? "1 answer was" : `${queue.again} answers were`} Again.` : "."}
+              {queue.again > 0
+                ? t("You studied {cards}, and {answers} Again.", { cards: tp(queue.total, "{count} card", "{count} cards"), answers: tp(queue.again, "{count} answer was", "{count} answers were") })
+                : t("You studied {cards}.", { cards: tp(queue.total, "{count} card", "{count} cards") })}
             </p>
-            <button type="button" className="btn primary" onClick={props.onClose} data-testid="review-done">Done</button>
+            <button type="button" className="btn primary" onClick={props.onClose} data-testid="review-done">{t("Done")}</button>
           </div>
         )}
 
         {card && target && !finished && (
           <>
             <div className="index-card review-card" data-testid="review-card" data-card={card.id}>
-              <CardFace fs={fs} notebook={target.notebook} side={card.front} empty="(empty)" />
+              <CardFace fs={fs} notebook={target.notebook} side={card.front} empty={t("(empty)")} />
               {turned && <div className="rule" />}
               {turned && (
                 <div data-testid="review-back" style={{ display: "flex", flexDirection: "column", gap: "var(--x3)" }}>
-                  <CardFace fs={fs} notebook={target.notebook} side={card.back} empty="(empty)" />
+                  <CardFace fs={fs} notebook={target.notebook} side={card.back} empty={t("(empty)")} />
                 </div>
               )}
             </div>
             <div className="review-actions">
               {card.pageID && props.onGoToPage && (
-                <button type="button" className="btn flat small" onClick={() => props.onGoToPage!(target.notebook, card.pageID!)} data-testid="review-go-to-page">Go to Page</button>
+                <button type="button" className="btn flat small" onClick={() => props.onGoToPage!(target.notebook, card.pageID!)} data-testid="review-go-to-page">{t("Go to Page")}</button>
               )}
               <div className="grow" />
             </div>
             {!turned ? (
-              <button type="button" className="btn primary" style={{ minHeight: 46 }} onClick={() => setTurned(true)} data-testid="show-answer">Show Answer</button>
+              <button type="button" className="btn primary" style={{ minHeight: 46 }} onClick={() => setTurned(true)} data-testid="show-answer">{t("Show Answer")}</button>
             ) : (
               <div className="grades">
                 <div className="grade">
-                  <button type="button" className="btn" onClick={() => void grade("again")} data-testid="grade-again">Again</button>
+                  <button type="button" className="btn" onClick={() => void grade("again")} data-testid="grade-again">{t("Again")}</button>
                   <span className="when" data-testid="when-again">{when?.again}</span>
                 </div>
                 <div className="grade">
-                  <button type="button" className="btn primary" onClick={() => void grade("good")} data-testid="grade-good">Good</button>
+                  <button type="button" className="btn primary" onClick={() => void grade("good")} data-testid="grade-good">{t("Good")}</button>
                   <span className="when" data-testid="when-good">{when?.good}</span>
                 </div>
                 <div className="grade">
-                  <button type="button" className="btn" onClick={() => void grade("easy")} data-testid="grade-easy">Easy</button>
+                  <button type="button" className="btn" onClick={() => void grade("easy")} data-testid="grade-easy">{t("Easy")}</button>
                   <span className="when" data-testid="when-easy">{when?.easy}</span>
                 </div>
               </div>

@@ -8,6 +8,7 @@ import { backdrops } from "./backdrops";
 import type { Picture } from "./renderPage";
 import { stickerDataURL, stickerNamed } from "./stickers";
 import { faceCSS, LINE_HEIGHT, mathRuns, textLines, wrapLine } from "./textLayout";
+import { t } from "../i18n";
 
 type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -43,7 +44,7 @@ export function linkText(item: LinkItem, manifest: Pick<Manifest, "pages">): str
   if (item.target.to === "notebook") return item.target.name;
   const target = item.target;
   const index = manifest.pages.findIndex((page) => page.id === target.page);
-  return index === -1 ? "Missing page" : `Page ${index + 1}`;
+  return index === -1 ? t("Missing page") : t("Page {number}", { number: index + 1 });
 }
 
 function turned(ctx: Ctx, item: PageItem, draw: () => void): void {

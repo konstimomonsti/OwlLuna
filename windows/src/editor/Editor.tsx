@@ -8,7 +8,9 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { useStore } from "zustand";
 import { stickerDataURL, stickers } from "../canvas/stickers";
 import { anchorBelow, IconButton, Menu, MenuBreak, MenuRow, type MenuAnchor } from "../design/controls";
-import { paperColorNames, paperColors, paperCSS, templateNames, type PaperTemplate } from "../model/paper";
+import { t } from "../i18n";
+import { paperColorName, templateName } from "../i18n/names";
+import { paperColors, paperCSS, type PaperTemplate } from "../model/paper";
 import { pickFiles } from "../platform/host";
 import { closeTab, notify, renameNotebook, setSplit, showLibrary, showTab, updateSettings, useApp } from "../state/app";
 import "../design/editor-panels.css";
@@ -95,7 +97,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
   const readAsset = useCallback((notebook: string, file: string) => doc.fs.read(assetPath(notebook, file)), [doc]);
 
   const addPicture = useCallback(async () => {
-    const files = await pickFiles([{ name: "Pictures", extensions: ["png", "jpg", "jpeg", "webp", "gif"] }], true);
+    const files = await pickFiles([{ name: t("Pictures"), extensions: ["png", "jpg", "jpeg", "webp", "gif"] }], true);
     let offset = 0;
     for (const file of files) {
       const at = centre();
@@ -117,7 +119,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
     const now = session.getState();
     const found = strokesToRead((id) => doc.ink(id), now.selection, now.currentPage);
     if (found.strokes.length === 0) {
-      notify("Write or select some handwriting first.");
+      notify(t("Write or select some handwriting first."));
       return;
     }
     setInkText(found);
@@ -149,7 +151,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
 
   const toggleBookmark = useCallback(() => {
     const target = doc.page(session.getState().currentPage);
-    if (target) doc.updatePage(target.id, target.bookmark ? "Remove Bookmark" : "Bookmark", (draft) => { if (draft.bookmark) delete draft.bookmark; else draft.bookmark = true; });
+    if (target) doc.updatePage(target.id, target.bookmark ? t("Remove Bookmark") : t("Bookmark"), (draft) => { if (draft.bookmark) delete draft.bookmark; else draft.bookmark = true; });
   }, [doc, session]);
 
   // Keyboard
@@ -171,7 +173,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
       if (mod && !event.shiftKey && !event.altKey && key === "z") { doc.undo(); return done(); }
       if (mod && ((event.shiftKey && key === "z") || key === "y")) { doc.redo(); return done(); }
       if (mod && key === "c") { if (copySelection(doc, session)) done(); return; }
-      if (mod && key === "x") { if (copySelection(doc, session)) { deleteSelection(doc, session, "Cut"); done(); } return; }
+      if (mod && key === "x") { if (copySelection(doc, session)) { deleteSelection(doc, session, t("Cut")); done(); } return; }
       if (mod && key === "d") { if (duplicateSelection(doc, session)) done(); return; }
       if (mod && key === "a" && !board) {
         const ids = doc.ink(page.id).map((stroke) => stroke.id);
@@ -220,7 +222,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
     const onPaste = (event: ClipboardEvent) => {
       if (typing(event.target) || document.querySelector(".scrim")) return;
       event.preventDefault();
-      void pasteFromClipboard(doc, session, event.clipboardData, centre(), readAsset).catch(() => notify("That couldn't be pasted.", "trouble"));
+      void pasteFromClipboard(doc, session, event.clipboardData, centre(), readAsset).catch(() => notify(t("That couldn't be pasted."), "trouble"));
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
@@ -276,7 +278,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
     <div className={`editor${state.focus ? " focus" : ""}${state.zoomWindow ? " zoomed" : ""}`} data-testid="editor" data-notebook={doc.id}>
       {!state.focus && (
         <header className="editor-bar">
-          {!props.secondary && <IconButton label="Library" onClick={showLibrary} testid="back-to-library"><ChevronLeft /></IconButton>}
+          {!props.secondary && <IconButton label={t("Library")} onClick={showLibrary} testid="back-to-library"><ChevronLeft /></IconButton>}
           {renaming ? (
             <input
               className="field title-field"
@@ -292,47 +294,47 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
               }}
             />
           ) : (
-            <button type="button" className="title-button display truncate" title="Rename" onClick={() => setRenaming(true)} data-testid="notebook-title">{doc.manifest.title}</button>
+            <button type="button" className="title-button display truncate" title={t("Rename")} onClick={() => setRenaming(true)} data-testid="notebook-title">{doc.manifest.title}</button>
           )}
           <span className={`save-state meta ${doc.saveState}`} data-testid="save-state" data-state={doc.saveState} title={doc.saveError ?? ""}>
-            {doc.saveState === "saved" ? "Saved" : doc.saveState === "saving" ? "Saving…" : doc.saveState === "failed" ? "Not saved" : "Unsaved"}
+            {doc.saveState === "saved" ? t("Saved") : doc.saveState === "saving" ? t("Saving…") : doc.saveState === "failed" ? t("Not saved") : t("Unsaved")}
           </span>
           {!props.secondary && tabs.length > 1 && (
             <div className="tabs" role="tablist">
               {tabs.map((id) => (
                 <div key={id} className={`tab${id === doc.id ? " on" : ""}`} role="tab" aria-selected={id === doc.id}>
-                  <button type="button" className="truncate" onClick={() => showTab(id)} data-testid="tab">{manifests[id]?.title ?? "Notebook"}</button>
-                  <button type="button" aria-label={`Close ${manifests[id]?.title ?? "notebook"}`} onClick={() => void closeTab(id)}><X /></button>
+                  <button type="button" className="truncate" onClick={() => showTab(id)} data-testid="tab">{manifests[id]?.title ?? t("Notebook")}</button>
+                  <button type="button" aria-label={t("Close {name}", { name: manifests[id]?.title ?? t("Notebook") })} onClick={() => void closeTab(id)}><X /></button>
                 </div>
               ))}
             </div>
           )}
           <div className="grow" />
           <div className="bar-group">
-            <IconButton label={doc.undoLabel ? `Undo ${doc.undoLabel} (Ctrl+Z)` : "Undo (Ctrl+Z)"} disabled={!doc.canUndo} onClick={() => doc.undo()} testid="undo"><Undo2 /></IconButton>
-            <IconButton label={doc.redoLabel ? `Redo ${doc.redoLabel} (Ctrl+Y)` : "Redo (Ctrl+Y)"} disabled={!doc.canRedo} onClick={() => doc.redo()} testid="redo"><Redo2 /></IconButton>
+            <IconButton label={doc.undoLabel ? t("Undo {action} (Ctrl+Z)", { action: doc.undoLabel }) : t("Undo (Ctrl+Z)")} disabled={!doc.canUndo} onClick={() => doc.undo()} testid="undo"><Undo2 /></IconButton>
+            <IconButton label={doc.redoLabel ? t("Redo {action} (Ctrl+Y)", { action: doc.redoLabel }) : t("Redo (Ctrl+Y)")} disabled={!doc.canRedo} onClick={() => doc.redo()} testid="redo"><Redo2 /></IconButton>
           </div>
           {!board && (
-            <button type="button" className="btn in-bar small meta" onClick={() => session.setState({ panel: state.panel === "navigator" ? null : "navigator" })} title="Pages" data-testid="page-count">
+            <button type="button" className="btn in-bar small meta" onClick={() => session.setState({ panel: state.panel === "navigator" ? null : "navigator" })} title={t("Pages")} data-testid="page-count">
               {index + 1} / {pages.length}
             </button>
           )}
-          <button type="button" className="btn in-bar small meta" onClick={(event) => setMenu({ kind: "zoom", anchor: anchorBelow(event.currentTarget, "end") })} title="Zoom" data-testid="zoom-level">
+          <button type="button" className="btn in-bar small meta" onClick={(event) => setMenu({ kind: "zoom", anchor: anchorBelow(event.currentTarget, "end") })} title={t("Zoom")} data-testid="zoom-level">
             {Math.round(state.zoom * 100)}%
           </button>
           {board && (
-            <IconButton label="Paper" onClick={(event) => setMenu({ kind: "paper", anchor: anchorBelow(event.currentTarget, "end") })} testid="board-paper"><Palette /></IconButton>
+            <IconButton label={t("Paper")} onClick={(event) => setMenu({ kind: "paper", anchor: anchorBelow(event.currentTarget, "end") })} testid="board-paper"><Palette /></IconButton>
           )}
           {page.background.kind === "pdf" && (
-            <IconButton label="Select Text" on={state.textSelect} onClick={() => session.setState({ textSelect: !state.textSelect })} testid="select-text"><TextSelect /></IconButton>
+            <IconButton label={t("Select Text")} on={state.textSelect} onClick={() => session.setState({ textSelect: !state.textSelect })} testid="select-text"><TextSelect /></IconButton>
           )}
-          <IconButton label={page.bookmark ? "Remove Bookmark (Ctrl+B)" : "Bookmark This Page (Ctrl+B)"} on={page.bookmark === true} onClick={toggleBookmark} testid="bookmark">
+          <IconButton label={page.bookmark ? t("Remove Bookmark (Ctrl+B)") : t("Bookmark This Page (Ctrl+B)")} on={page.bookmark === true} onClick={toggleBookmark} testid="bookmark">
             {page.bookmark ? <BookmarkCheck /> : <Bookmark />}
           </IconButton>
           <RecorderControl doc={doc} />
-          <IconButton label="Add" onClick={(event) => setMenu({ kind: "add", anchor: anchorBelow(event.currentTarget, "end") })} testid="add-menu"><Plus /></IconButton>
-          <IconButton label="More" onClick={(event) => setMenu({ kind: "more", anchor: anchorBelow(event.currentTarget, "end") })} testid="more-menu"><Ellipsis /></IconButton>
-          {props.secondary && <IconButton label="Close Side by Side" onClick={() => setSplit(null)}><X /></IconButton>}
+          <IconButton label={t("Add")} onClick={(event) => setMenu({ kind: "add", anchor: anchorBelow(event.currentTarget, "end") })} testid="add-menu"><Plus /></IconButton>
+          <IconButton label={t("More")} onClick={(event) => setMenu({ kind: "more", anchor: anchorBelow(event.currentTarget, "end") })} testid="more-menu"><Ellipsis /></IconButton>
+          {props.secondary && <IconButton label={t("Close Side by Side")} onClick={() => setSplit(null)}><X /></IconButton>}
         </header>
       )}
 
@@ -357,7 +359,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
         )}
         {state.focus && (
           <div className="focus-exit">
-            <IconButton label="Leave Focus (Esc)" onClick={() => session.setState({ focus: false })} testid="leave-focus"><X /></IconButton>
+            <IconButton label={t("Leave Focus (Esc)")} onClick={() => session.setState({ focus: false })} testid="leave-focus"><X /></IconButton>
           </div>
         )}
       </div>
@@ -379,16 +381,16 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
       {replaying && <ReplayBar key={replaying.id} ref={replay} doc={doc} session={session} recording={replaying} onClose={() => setReplaying(null)} />}
 
       {menu?.kind === "zoom" && (
-        <Menu anchor={menu.anchor} title="Zoom" onClose={close}>
+        <Menu anchor={menu.anchor} title={t("Zoom")} onClose={close}>
           {board ? (
             <>
-              <MenuRow icon={<Maximize2 />} keys="Ctrl+1" onClick={() => { showEverything(doc, session, viewSize()); close(); }} testid="zoom-show-everything">Show Everything</MenuRow>
-              <MenuRow icon={<House />} keys="Home" onClick={() => { backToStart(session); close(); }} testid="zoom-back-to-start">Back to Start</MenuRow>
+              <MenuRow icon={<Maximize2 />} keys="Ctrl+1" onClick={() => { showEverything(doc, session, viewSize()); close(); }} testid="zoom-show-everything">{t("Show Everything")}</MenuRow>
+              <MenuRow icon={<House />} keys="Home" onClick={() => { backToStart(session); close(); }} testid="zoom-back-to-start">{t("Back to Start")}</MenuRow>
             </>
           ) : (
             <>
-              <MenuRow icon={<GalleryVertical />} keys="Ctrl+0" chosen={state.fit === "width"} onClick={() => { session.setState({ fit: "width" }); close(); }}>Fit Width</MenuRow>
-              <MenuRow icon={<Maximize />} keys="Ctrl+9" chosen={state.fit === "page"} onClick={() => { session.setState({ fit: "page" }); close(); }}>Fit Page</MenuRow>
+              <MenuRow icon={<GalleryVertical />} keys="Ctrl+0" chosen={state.fit === "width"} onClick={() => { session.setState({ fit: "width" }); close(); }}>{t("Fit Width")}</MenuRow>
+              <MenuRow icon={<Maximize />} keys="Ctrl+9" chosen={state.fit === "page"} onClick={() => { session.setState({ fit: "page" }); close(); }}>{t("Fit Page")}</MenuRow>
             </>
           )}
           <MenuBreak />
@@ -399,15 +401,15 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
       )}
 
       {menu?.kind === "paper" && board && (
-        <Menu anchor={menu.anchor} title="Paper" onClose={close} testid="paper-menu">
+        <Menu anchor={menu.anchor} title={t("Paper")} onClose={close} testid="paper-menu">
           {(["blank", "dotted", "grid", "narrowRuled", "wideRuled"] as PaperTemplate[]).map((template) => (
             <MenuRow
               key={template}
               chosen={page.background.kind === "template" && page.background.template === template}
-              onClick={() => { doc.updatePage(page.id, "Change Paper", (draft) => { draft.background = { kind: "template", template }; }); close(); }}
+              onClick={() => { doc.updatePage(page.id, t("Change Paper"), (draft) => { draft.background = { kind: "template", template }; }); close(); }}
               testid={`paper-${template}`}
             >
-              {templateNames[template]}
+              {templateName(template)}
             </MenuRow>
           ))}
           <MenuBreak />
@@ -416,35 +418,35 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
               key={color}
               icon={<span style={{ width: 16, height: 16, borderRadius: 3, background: paperCSS(color), border: "1px solid var(--rule)", display: "block" }} />}
               chosen={page.paperColor === color}
-              onClick={() => { doc.updatePage(page.id, "Change Paper", (draft) => { draft.paperColor = color; }); close(); }}
+              onClick={() => { doc.updatePage(page.id, t("Change Paper"), (draft) => { draft.paperColor = color; }); close(); }}
               testid={`paper-color-${color}`}
             >
-              {paperColorNames[color]}
+              {paperColorName(color)}
             </MenuRow>
           ))}
         </Menu>
       )}
 
       {menu?.kind === "add" && (
-        <Menu anchor={menu.anchor} title="Add" onClose={close} testid="add-menu-card">
-          {!board && <MenuRow icon={<FilePlus2 />} keys="Ctrl+Enter" onClick={() => { const added = doc.addPage(page.id); goToPage(session, added.id); close(); }} testid="add-page-row">Page After This One</MenuRow>}
+        <Menu anchor={menu.anchor} title={t("Add")} onClose={close} testid="add-menu-card">
+          {!board && <MenuRow icon={<FilePlus2 />} keys="Ctrl+Enter" onClick={() => { const added = doc.addPage(page.id); goToPage(session, added.id); close(); }} testid="add-page-row">{t("Page After This One")}</MenuRow>}
           {!board && <MenuBreak />}
-          <MenuRow icon={<ImageIcon />} onClick={() => { close(); void addPicture(); }}>Picture…</MenuRow>
-          {!board && <MenuRow icon={<FileInput />} onClick={() => { close(); void addPdfPagesTo(doc, page.id).then((first) => { if (first) goToPage(session, first); }); }} testid="add-pdf-pages">Pages from PDF…</MenuRow>}
-          {!board && <MenuRow icon={<ImagePlus />} onClick={() => { close(); void addPicturePageTo(doc, page.id).then((first) => { if (first) goToPage(session, first); }); }} testid="add-picture-page">Picture as Page…</MenuRow>}
-          {!board && <MenuRow icon={<Camera />} onClick={() => { close(); setScanning(true); }} testid="add-scan">Scan from Camera…</MenuRow>}
-          <MenuRow icon={<Type />} onClick={() => { setTool(session, { kind: "text" }); close(); }}>Text Box</MenuRow>
-          <MenuRow icon={<StickyNote />} onClick={() => setMenu({ kind: "stickers", anchor: menu.anchor })}>Sticker</MenuRow>
-          <MenuRow icon={<Link2 />} onClick={() => { close(); setLinkSheet({ editing: null }); }} testid="add-link-row">Link…</MenuRow>
-          <MenuRow icon={<Tally1 />} onClick={() => { setTool(session, { kind: "tape" }); close(); }}>Study Tape</MenuRow>
+          <MenuRow icon={<ImageIcon />} onClick={() => { close(); void addPicture(); }}>{t("Picture…")}</MenuRow>
+          {!board && <MenuRow icon={<FileInput />} onClick={() => { close(); void addPdfPagesTo(doc, page.id).then((first) => { if (first) goToPage(session, first); }); }} testid="add-pdf-pages">{t("Pages from PDF…")}</MenuRow>}
+          {!board && <MenuRow icon={<ImagePlus />} onClick={() => { close(); void addPicturePageTo(doc, page.id).then((first) => { if (first) goToPage(session, first); }); }} testid="add-picture-page">{t("Picture as Page…")}</MenuRow>}
+          {!board && <MenuRow icon={<Camera />} onClick={() => { close(); setScanning(true); }} testid="add-scan">{t("Scan from Camera…")}</MenuRow>}
+          <MenuRow icon={<Type />} onClick={() => { setTool(session, { kind: "text" }); close(); }}>{t("Text Box")}</MenuRow>
+          <MenuRow icon={<StickyNote />} onClick={() => setMenu({ kind: "stickers", anchor: menu.anchor })}>{t("Sticker")}</MenuRow>
+          <MenuRow icon={<Link2 />} onClick={() => { close(); setLinkSheet({ editing: null }); }} testid="add-link-row">{t("Link…")}</MenuRow>
+          <MenuRow icon={<Tally1 />} onClick={() => { setTool(session, { kind: "tape" }); close(); }}>{t("Study Tape")}</MenuRow>
         </Menu>
       )}
 
       {menu?.kind === "stickers" && (
-        <Menu anchor={menu.anchor} title="Stickers" onClose={close} width={292} testid="sticker-menu">
+        <Menu anchor={menu.anchor} title={t("Stickers")} onClose={close} width={292} testid="sticker-menu">
           <div className="sticker-grid">
             {stickers.map((sticker) => (
-              <button key={sticker.name} type="button" title={sticker.label} aria-label={sticker.label} data-testid={`sticker-${sticker.name}`} onClick={() => { placeSticker(doc, session, sticker.name, centre()); close(); }}>
+              <button key={sticker.name} type="button" title={t(sticker.label)} aria-label={t(sticker.label)} data-testid={`sticker-${sticker.name}`} onClick={() => { placeSticker(doc, session, sticker.name, centre()); close(); }}>
                 <img src={stickerDataURL(sticker)} alt="" draggable={false} />
               </button>
             ))}
@@ -454,33 +456,33 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
 
       {menu?.kind === "more" && (
         <Menu anchor={menu.anchor} title={doc.manifest.title} onClose={close} testid="more-menu-card">
-          {!board && <MenuRow icon={<LayoutGrid />} onClick={() => { session.setState({ panel: "navigator" }); close(); }}>Pages</MenuRow>}
-          <MenuRow icon={<ScrollText />} onClick={() => { if (board) setMenu({ kind: "paper", anchor: menu.anchor }); else { session.setState({ panel: "paper" }); close(); } }}>Paper…</MenuRow>
-          <MenuRow icon={<Search />} keys="Ctrl+F" onClick={() => { session.setState({ panel: "find" }); close(); }}>Find in Notebook</MenuRow>
-          <MenuRow icon={<ListTree />} onClick={() => { session.setState({ panel: "outline" }); close(); }}>Outline and Bookmarks</MenuRow>
+          {!board && <MenuRow icon={<LayoutGrid />} onClick={() => { session.setState({ panel: "navigator" }); close(); }}>{t("Pages")}</MenuRow>}
+          <MenuRow icon={<ScrollText />} onClick={() => { if (board) setMenu({ kind: "paper", anchor: menu.anchor }); else { session.setState({ panel: "paper" }); close(); } }}>{t("Paper…")}</MenuRow>
+          <MenuRow icon={<Search />} keys="Ctrl+F" onClick={() => { session.setState({ panel: "find" }); close(); }}>{t("Find in Notebook")}</MenuRow>
+          <MenuRow icon={<ListTree />} onClick={() => { session.setState({ panel: "outline" }); close(); }}>{t("Outline and Bookmarks")}</MenuRow>
           <MenuBreak />
           {page.background.kind === "pdf" && (
-            <MenuRow icon={<TextSelect />} chosen={state.textSelect} onClick={() => { session.setState({ textSelect: !state.textSelect }); close(); }} testid="more-select-text">Select Text</MenuRow>
+            <MenuRow icon={<TextSelect />} chosen={state.textSelect} onClick={() => { session.setState({ textSelect: !state.textSelect }); close(); }} testid="more-select-text">{t("Select Text")}</MenuRow>
           )}
-          <MenuRow icon={<ZoomIn />} chosen={state.zoomWindow !== null} onClick={() => { toggleZoomWindow(); close(); }} testid="more-zoom-window">Zoom Window</MenuRow>
-          <MenuRow icon={<Layers />} onClick={() => { session.setState({ panel: "cards" }); close(); }}>Flashcards</MenuRow>
-          <MenuRow icon={<Mic />} onClick={() => { session.setState({ panel: "recordings" }); close(); }}>Recordings</MenuRow>
-          <MenuRow icon={<MonitorPlay />} keys="Ctrl+Alt+Enter" onClick={() => { close(); startPresenting(); }} testid="more-present">Present</MenuRow>
-          <MenuRow icon={<Eye />} onClick={() => { setAllTape(true); close(); }} testid="lift-all-tape">Lift All Tape</MenuRow>
-          <MenuRow icon={<EyeOff />} onClick={() => { setAllTape(false); close(); }} testid="cover-all-tape">Cover All Tape</MenuRow>
-          <MenuRow icon={<FileDown />} onClick={() => { close(); setExporting(true); }} testid="more-export">Export…</MenuRow>
+          <MenuRow icon={<ZoomIn />} chosen={state.zoomWindow !== null} onClick={() => { toggleZoomWindow(); close(); }} testid="more-zoom-window">{t("Zoom Window")}</MenuRow>
+          <MenuRow icon={<Layers />} onClick={() => { session.setState({ panel: "cards" }); close(); }}>{t("Flashcards")}</MenuRow>
+          <MenuRow icon={<Mic />} onClick={() => { session.setState({ panel: "recordings" }); close(); }}>{t("Recordings")}</MenuRow>
+          <MenuRow icon={<MonitorPlay />} keys="Ctrl+Alt+Enter" onClick={() => { close(); startPresenting(); }} testid="more-present">{t("Present")}</MenuRow>
+          <MenuRow icon={<Eye />} onClick={() => { setAllTape(true); close(); }} testid="lift-all-tape">{t("Lift All Tape")}</MenuRow>
+          <MenuRow icon={<EyeOff />} onClick={() => { setAllTape(false); close(); }} testid="cover-all-tape">{t("Cover All Tape")}</MenuRow>
+          <MenuRow icon={<FileDown />} onClick={() => { close(); setExporting(true); }} testid="more-export">{t("Export…")}</MenuRow>
           <MenuBreak />
-          <MenuRow icon={<PenLine />} chosen={settings.drawWith === "pen"} onClick={() => { updateSettings({ drawWith: "pen" }); close(); }}>Draw With Pen Only</MenuRow>
-          <MenuRow icon={<Hand />} chosen={settings.drawWith === "penAndFinger"} onClick={() => { updateSettings({ drawWith: "penAndFinger" }); close(); }}>Draw With Pen and Finger</MenuRow>
+          <MenuRow icon={<PenLine />} chosen={settings.drawWith === "pen"} onClick={() => { updateSettings({ drawWith: "pen" }); close(); }}>{t("Draw With Pen Only")}</MenuRow>
+          <MenuRow icon={<Hand />} chosen={settings.drawWith === "penAndFinger"} onClick={() => { updateSettings({ drawWith: "penAndFinger" }); close(); }}>{t("Draw With Pen and Finger")}</MenuRow>
           {!board && <MenuBreak />}
-          {!board && <MenuRow icon={<GalleryVertical />} chosen={settings.pageFlow === "continuous"} onClick={() => { updateSettings({ pageFlow: "continuous" }); close(); }}>Scroll Pages</MenuRow>}
-          {!board && <MenuRow icon={<GalleryHorizontal />} chosen={settings.pageFlow === "single"} onClick={() => { updateSettings({ pageFlow: "single" }); close(); }}>One Page at a Time</MenuRow>}
+          {!board && <MenuRow icon={<GalleryVertical />} chosen={settings.pageFlow === "continuous"} onClick={() => { updateSettings({ pageFlow: "continuous" }); close(); }}>{t("Scroll Pages")}</MenuRow>}
+          {!board && <MenuRow icon={<GalleryHorizontal />} chosen={settings.pageFlow === "single"} onClick={() => { updateSettings({ pageFlow: "single" }); close(); }}>{t("One Page at a Time")}</MenuRow>}
           <MenuBreak />
-          <MenuRow icon={<Focus />} keys="Ctrl+Shift+F" onClick={() => { session.setState({ focus: true }); close(); }}>Focus</MenuRow>
+          <MenuRow icon={<Focus />} keys="Ctrl+Shift+F" onClick={() => { session.setState({ focus: true }); close(); }}>{t("Focus")}</MenuRow>
           {!props.secondary && others.length > 0 && (
-            <MenuRow icon={<Columns2 />} chosen={split !== null} onClick={() => { setSplit(split ? null : others[0]); close(); }}>Side by Side</MenuRow>
+            <MenuRow icon={<Columns2 />} chosen={split !== null} onClick={() => { setSplit(split ? null : others[0]); close(); }}>{t("Side by Side")}</MenuRow>
           )}
-          <MenuRow icon={<FileText />} onClick={() => { setRenaming(true); close(); }}>Rename…</MenuRow>
+          <MenuRow icon={<FileText />} onClick={() => { setRenaming(true); close(); }}>{t("Rename…")}</MenuRow>
         </Menu>
       )}
       {exporting && <ExportSheet doc={doc} session={session} onClose={() => setExporting(false)} />}

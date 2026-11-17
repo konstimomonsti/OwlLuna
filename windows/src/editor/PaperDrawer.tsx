@@ -12,7 +12,7 @@ import { confirm, IconButton, Segmented } from "../design/controls";
 import { uuid } from "../model/ids";
 import { newPage, type Manifest, type NotebookPaper, type Page } from "../model/notebook";
 import {
-  familyNames, familyTemplates, pageSizeNames, pageSizePoints, pageSizes, paperColorNames, paperColors, paperCSS, paperFamilies, templateNames,
+  familyTemplates, pageSizePoints, pageSizes, paperColors, paperCSS, paperFamilies,
   type PageSize, type PaperColor, type PaperTemplate,
 } from "../model/paper";
 import { pickFiles } from "../platform/host";
@@ -21,6 +21,8 @@ import { addAsset } from "../storage/package";
 import { extensionOf, pictureSize } from "./actions";
 import type { NotebookDocument } from "./document";
 import type { Session } from "./session";
+import { t } from "../i18n";
+import { familyName, pageSizeName, paperColorName, templateName } from "../i18n/names";
 
 type Scope = "page" | "all" | "new";
 
@@ -84,58 +86,58 @@ export function PaperDrawer(props: { doc: NotebookDocument; session: Session; ve
     const count = replaces(pages);
     if (!count) return true;
     return confirm({
-      title: count === 1 ? "Replace this page's PDF or picture?" : `Replace ${count} PDF or picture pages?`,
-      message: "The paper goes, but the writing and items stay. You can undo this.",
-      confirm: "Replace",
+      title: count === 1 ? t("Replace this page's PDF or picture?") : t("Replace {count} PDF or picture pages?", { count }),
+      message: t("The paper goes, but the writing and items stay. You can undo this."),
+      confirm: t("Replace"),
       destructive: true,
     });
   };
 
   const chooseTemplate = async (next: PaperTemplate) => {
     if (scope === "new") {
-      doc.transact("Change New Page Paper", (draft) => { draft.manifest.defaults = { ...draft.manifest.defaults, template: next }; });
+      doc.transact(t("Change New Page Paper"), (draft) => { draft.manifest.defaults = { ...draft.manifest.defaults, template: next }; });
       return;
     }
     const pages = targets(doc.manifest, page.id, scope);
     if (!(await sureAboutBackdrops(pages))) return;
     const ids = new Set(pages.map((candidate) => candidate.id));
-    doc.transact("Change Paper", (draft) => {
+    doc.transact(t("Change Paper"), (draft) => {
       for (const target of draft.manifest.pages) if (ids.has(target.id)) target.background = { kind: "template", template: next };
     });
   };
 
   const chooseColor = (next: PaperColor) => {
     if (scope === "new") {
-      doc.transact("Change New Page Paper", (draft) => { draft.manifest.defaults = { ...draft.manifest.defaults, paperColor: next }; });
+      doc.transact(t("Change New Page Paper"), (draft) => { draft.manifest.defaults = { ...draft.manifest.defaults, paperColor: next }; });
       return;
     }
     // A PDF or picture has its own colours; only template pages take the new one.
     const ids = new Set(targets(doc.manifest, page.id, scope).filter((candidate) => candidate.background.kind === "template").map((candidate) => candidate.id));
-    doc.transact("Change Paper", (draft) => {
+    doc.transact(t("Change Paper"), (draft) => {
       for (const target of draft.manifest.pages) if (ids.has(target.id)) target.paperColor = next;
     });
   };
 
   const chooseSize = (next: PageSize) => {
     if (scope === "new") {
-      doc.transact("Change New Page Size", (draft) => { draft.manifest.defaults = { ...draft.manifest.defaults, pageSize: next }; });
+      doc.transact(t("Change New Page Size"), (draft) => { draft.manifest.defaults = { ...draft.manifest.defaults, pageSize: next }; });
       return;
     }
     const ids = new Set(targets(doc.manifest, page.id, scope).map((candidate) => candidate.id));
     // Content keeps its place on the page; the page grows or shrinks from its top left.
-    doc.transact("Change Page Size", (draft) => {
+    doc.transact(t("Change Page Size"), (draft) => {
       for (const target of draft.manifest.pages) if (ids.has(target.id)) target.size = { ...pageSizePoints[next] };
     });
   };
 
   const usePaper = async (paper: NotebookPaper) => {
     if (scope === "new") {
-      notify("Your own paper is applied to pages that already exist.");
+      notify(t("Your own paper is applied to pages that already exist."));
       return;
     }
     const pages = targets(doc.manifest, page.id, scope);
     const ids = new Set(pages.map((candidate) => candidate.id));
-    doc.transact("Change Paper", (draft) => {
+    doc.transact(t("Change Paper"), (draft) => {
       for (const target of draft.manifest.pages) {
         if (!ids.has(target.id)) continue;
         target.background = structuredClone(paper.background);
@@ -145,10 +147,10 @@ export function PaperDrawer(props: { doc: NotebookDocument; session: Session; ve
   };
 
   const addPaper = async () => {
-    const [file] = await pickFiles([{ name: "Pictures and PDFs", extensions: ["png", "jpg", "jpeg", "webp", "pdf"] }], false);
+    const [file] = await pickFiles([{ name: t("Pictures and PDFs"), extensions: ["png", "jpg", "jpeg", "webp", "pdf"] }], false);
     if (!file) return;
     const extension = extensionOf(file.name) || "png";
-    const name = file.name.replace(/\.[^.]+$/, "") || "Paper";
+    const name = file.name.replace(/\.[^.]+$/, "") || t("Paper");
     try {
       let paper: NotebookPaper;
       if (extension === "pdf") {
@@ -159,41 +161,41 @@ export function PaperDrawer(props: { doc: NotebookDocument; session: Session; ve
         paper = { id: uuid(), name, background: { kind: "pdf", file: stored, index: 0 }, size: { w: view.width, h: view.height } };
       } else {
         const size = await pictureSize(file.data);
-        if (!size) throw new Error("That picture couldn't be read.");
+        if (!size) throw new Error(t("That picture couldn't be read."));
         const stored = await addAsset(doc.fs, doc.id, file.data, extension === "jpeg" ? "jpg" : extension);
         const scale = pageSizePoints.letter.w / size.w;
         paper = { id: uuid(), name, background: { kind: "image", file: stored }, size: { w: size.w * scale, h: size.h * scale } };
       }
-      doc.transact("Add Paper", (draft) => { draft.manifest.papers = [...(draft.manifest.papers ?? []), paper]; });
+      doc.transact(t("Add Paper"), (draft) => { draft.manifest.papers = [...(draft.manifest.papers ?? []), paper]; });
     } catch (error) {
-      notify(error instanceof Error ? error.message : "That paper couldn't be added.", "trouble");
+      notify(error instanceof Error ? error.message : t("That paper couldn't be added."), "trouble");
     }
   };
 
   const removePaper = (id: string) => {
-    doc.transact("Remove Paper", (draft) => { draft.manifest.papers = (draft.manifest.papers ?? []).filter((paper) => paper.id !== id); });
+    doc.transact(t("Remove Paper"), (draft) => { draft.manifest.papers = (draft.manifest.papers ?? []).filter((paper) => paper.id !== id); });
   };
 
   return (
     <aside className="side-panel right paper-drawer" data-testid="paper-drawer">
       <div className="side-head">
-        <h3 className="display grow" style={{ fontSize: 16 }}>Paper</h3>
-        <IconButton label="Close" onClick={() => session.setState({ panel: null })} testid="paper-close"><X /></IconButton>
+        <h3 className="display grow" style={{ fontSize: 16 }}>{t("Paper")}</h3>
+        <IconButton label={t("Close")} onClick={() => session.setState({ panel: null })} testid="paper-close"><X /></IconButton>
       </div>
       <div className="side-body drawer-body">
         <div>
-          <span className="label">Apply To</span>
+          <span className="label">{t("Apply To")}</span>
           <Segmented<Scope>
-            label="Apply to"
+            label={t("Apply to")}
             value={scope}
             onChange={setScope}
-            options={[{ value: "page", label: "This Page" }, { value: "all", label: "All Pages" }, { value: "new", label: "New Pages" }]}
+            options={[{ value: "page", label: t("This Page") }, { value: "all", label: t("All Pages") }, { value: "new", label: t("New Pages") }]}
           />
         </div>
 
         {paperFamilies.map((family) => (
           <div key={family}>
-            <span className="label">{familyNames[family]}</span>
+            <span className="label">{familyName(family)}</span>
             <div className="paper-grid">
               {familyTemplates[family].map((name) => (
                 <button
@@ -205,7 +207,7 @@ export function PaperDrawer(props: { doc: NotebookDocument; session: Session; ve
                   data-testid={`paper-template-${name}`}
                 >
                   <TemplatePreview template={name} color={shownColor} />
-                  <span>{templateNames[name]}</span>
+                  <span>{templateName(name)}</span>
                 </button>
               ))}
             </div>
@@ -213,7 +215,7 @@ export function PaperDrawer(props: { doc: NotebookDocument; session: Session; ve
         ))}
 
         <div>
-          <span className="label">Colour</span>
+          <span className="label">{t("Colour")}</span>
           <div className="swatches">
             {paperColors.map((color) => (
               <button
@@ -221,8 +223,8 @@ export function PaperDrawer(props: { doc: NotebookDocument; session: Session; ve
                 type="button"
                 className={`swatch${shownColor === color ? " on" : ""}`}
                 style={{ background: paperCSS(color) }}
-                title={paperColorNames[color]}
-                aria-label={paperColorNames[color]}
+                title={paperColorName(color)}
+                aria-label={paperColorName(color)}
                 aria-pressed={shownColor === color}
                 onClick={() => chooseColor(color)}
                 data-testid={`paper-colour-${color}`}
@@ -232,7 +234,7 @@ export function PaperDrawer(props: { doc: NotebookDocument; session: Session; ve
         </div>
 
         <div>
-          <span className="label">Page Size</span>
+          <span className="label">{t("Page Size")}</span>
           <div className="size-list">
             {pageSizes.map((size) => (
               <button
@@ -243,28 +245,28 @@ export function PaperDrawer(props: { doc: NotebookDocument; session: Session; ve
                 onClick={() => chooseSize(size)}
                 data-testid={`paper-size-${size}`}
               >
-                {pageSizeNames[size]}
+                {pageSizeName(size)}
               </button>
             ))}
           </div>
         </div>
 
         <div>
-          <span className="label">Your Own Paper</span>
+          <span className="label">{t("Your Own Paper")}</span>
           {papers.length > 0 && (
             <div className="paper-grid">
               {papers.map((paper) => (
                 <div key={paper.id} className="paper-choice own" data-testid="own-paper">
-                  <button type="button" className="own-face" onClick={() => void usePaper(paper)} title={`Use ${paper.name}`} data-testid="own-paper-use">
+                  <button type="button" className="own-face" onClick={() => void usePaper(paper)} title={t("Use {name}", { name: paper.name })} data-testid="own-paper-use">
                     <PaperThumb doc={doc} paper={paper} />
                   </button>
                   <span className="truncate">{paper.name}</span>
-                  <IconButton label={`Remove ${paper.name}`} onClick={() => removePaper(paper.id)} testid="own-paper-remove"><Trash2 /></IconButton>
+                  <IconButton label={t("Remove {name}", { name: paper.name })} onClick={() => removePaper(paper.id)} testid="own-paper-remove"><Trash2 /></IconButton>
                 </div>
               ))}
             </div>
           )}
-          <button type="button" className="btn small" onClick={() => void addPaper()} data-testid="add-own-paper"><FilePlus2 /> Add From Picture or PDF…</button>
+          <button type="button" className="btn small" onClick={() => void addPaper()} data-testid="add-own-paper"><FilePlus2 /> {t("Add From Picture or PDF…")}</button>
         </div>
       </div>
     </aside>

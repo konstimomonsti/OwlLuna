@@ -5,6 +5,7 @@ import { ask } from "../design/controls";
 import { invoke, isTauri } from "../platform/host";
 import { changeNotebook, closeTabIfOpen, notify, setAuthenticator, updateSettings, useApp } from "../state/app";
 import { hashPin, newSalt, pinMatches, validPin } from "./pin";
+import { t } from "../i18n";
 
 async function helloVerify(reason: string): Promise<boolean> {
   if (!isTauri) return false;
@@ -18,16 +19,16 @@ async function helloVerify(reason: string): Promise<boolean> {
 
 /** Asks for a new PIN twice and keeps its hash. False if the user backs out or the two don't agree. */
 export async function setPin(): Promise<boolean> {
-  const first = await ask({ title: "Set a PIN", message: "Four or more digits. It opens locked notebooks when Windows Hello can't.", confirm: "Next", password: true });
+  const first = await ask({ title: t("Set a PIN"), message: t("Four or more digits. It opens locked notebooks when Windows Hello can't."), confirm: t("Next"), password: true });
   if (first === null) return false;
   if (!validPin(first)) {
-    notify("A PIN is four or more digits.", "trouble");
+    notify(t("A PIN is four or more digits."), "trouble");
     return false;
   }
-  const second = await ask({ title: "Enter the PIN again", confirm: "Set PIN", password: true });
+  const second = await ask({ title: t("Enter the PIN again"), confirm: t("Set PIN"), password: true });
   if (second === null) return false;
   if (second !== first) {
-    notify("The two PINs didn't match. Nothing was changed.", "trouble");
+    notify(t("The two PINs didn't match. Nothing was changed."), "trouble");
     return false;
   }
   const salt = newSalt();
@@ -37,10 +38,10 @@ export async function setPin(): Promise<boolean> {
 
 async function askPin(reason: string): Promise<boolean> {
   const { pinHash, pinSalt } = useApp.getState().settings;
-  const pin = await ask({ title: "Enter your PIN", message: reason, confirm: "Unlock", password: true });
+  const pin = await ask({ title: t("Enter your PIN"), message: reason, confirm: t("Unlock"), password: true });
   if (pin === null) return false;
   if (await pinMatches(pin, pinHash, pinSalt)) return true;
-  notify("That PIN isn't right.", "trouble");
+  notify(t("That PIN isn't right."), "trouble");
   return false;
 }
 
@@ -53,24 +54,24 @@ export async function authenticate(reason: string): Promise<boolean> {
 
 /** Asks for the current PIN, then for a new one. */
 export async function changePin(): Promise<boolean> {
-  if (useApp.getState().settings.pinHash !== null && !(await askPin("Enter the current PIN first."))) return false;
+  if (useApp.getState().settings.pinHash !== null && !(await askPin(t("Enter the current PIN first.")))) return false;
   const done = await setPin();
-  if (done) notify("PIN changed.");
+  if (done) notify(t("PIN changed."));
   return done;
 }
 
 export async function lockNotebook(id: string): Promise<void> {
-  const title = useApp.getState().manifests[id]?.title ?? "this notebook";
-  if (!(await authenticate(`Lock “${title}”`))) return;
+  const title = useApp.getState().manifests[id]?.title ?? t("this notebook");
+  if (!(await authenticate(t("Lock “{name}”", { name: title })))) return;
   // Closed first, so it can't stay open on screen after it is locked.
   if (!(await closeTabIfOpen(id))) return;
   await changeNotebook(id, (manifest) => { manifest.locked = true; });
-  notify("Locked. It is hidden in the app, not encrypted.");
+  notify(t("Locked. It is hidden in the app, not encrypted."));
 }
 
 export async function unlockNotebook(id: string): Promise<void> {
-  const title = useApp.getState().manifests[id]?.title ?? "this notebook";
-  if (!(await authenticate(`Remove the lock from “${title}”`))) return;
+  const title = useApp.getState().manifests[id]?.title ?? t("this notebook");
+  if (!(await authenticate(t("Remove the lock from “{name}”", { name: title })))) return;
   await changeNotebook(id, (manifest) => { manifest.locked = false; });
 }
 

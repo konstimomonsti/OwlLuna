@@ -7,6 +7,7 @@ import { capturePointer } from "../canvas/pointer";
 import type { PictureItem } from "../model/notebook";
 import { clampCrop, croppedItem, MIN_CROP as MIN, type Crop } from "./crop";
 import type { NotebookDocument } from "./document";
+import { t } from "../i18n";
 
 type Grip = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw" | "move";
 
@@ -37,7 +38,7 @@ export function CropView(props: {
   const finish = (commit: boolean) => {
     if (commit) {
       const next = croppedItem(item, draft);
-      props.doc.updateItem(props.pageID, item.id, "Crop", (target) => {
+      props.doc.updateItem(props.pageID, item.id, t("Crop"), (target) => {
         if (target.kind !== "image") return;
         target.x = next.x; target.y = next.y; target.w = next.w; target.h = next.h;
         if (next.crop) target.crop = next.crop; else delete target.crop;
@@ -116,8 +117,8 @@ export function CropView(props: {
       </div>
       {createPortal(
         <div className="plate float-bar crop-bar" data-testid="crop-bar">
-          <button type="button" className="btn small" onClick={() => finish(false)} data-testid="crop-cancel">Cancel</button>
-          <button type="button" className="btn small primary" onClick={() => finish(true)} data-testid="crop-done">Done</button>
+          <button type="button" className="btn small" onClick={() => finish(false)} data-testid="crop-cancel">{t("Cancel")}</button>
+          <button type="button" className="btn small primary" onClick={() => finish(true)} data-testid="crop-done">{t("Done")}</button>
         </div>,
         document.body,
       )}

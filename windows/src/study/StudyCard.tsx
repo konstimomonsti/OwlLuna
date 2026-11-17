@@ -7,6 +7,7 @@ import { openNotebook, useApp } from "../state/app";
 import { dueByNotebook, refreshSummaries, useCards } from "./cardStore";
 import { dueSentence, summariseDue } from "./queue";
 import { Review } from "./Review";
+import { t } from "../i18n";
 
 export function StudyCard() {
   const manifests = useApp((state) => state.manifests);
@@ -30,13 +31,13 @@ export function StudyCard() {
   return (
     <>
       {summary.cards > 0 && (
-        <section className="plate study-card" data-testid="study-card" aria-label="Study">
+        <section className="plate study-card" data-testid="study-card" aria-label={t("Study")}>
           <div className="symbol"><Layers /></div>
           <div className="info">
-            <h2>Study</h2>
+            <h2>{t("Study")}</h2>
             <span className="secondary" data-testid="study-summary">{dueSentence(summary)}</span>
           </div>
-          <button type="button" className="btn primary" onClick={() => setReviewing(withDue)} data-testid="study-open">Study</button>
+          <button type="button" className="btn primary" onClick={() => setReviewing(withDue)} data-testid="study-open">{t("Study")}</button>
         </section>
       )}
       {reviewing && (

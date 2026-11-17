@@ -4,6 +4,7 @@ import { dayKey } from "../model/days";
 import { uuid } from "../model/ids";
 import { starterPens, type EraserMode, type ToolPreset } from "../model/tools";
 import { readText, type FS } from "../platform/fs";
+import { t, tn } from "../i18n";
 
 export interface Folder {
   id: string;
@@ -23,8 +24,8 @@ export type PenAction = "none" | "eraser" | "lasso" | "lastTool" | "undo" | "red
 export type TrayShortcut = "picture" | "text" | "sticker" | "link" | "tape" | "ruler" | "zoomWindow" | "inkToText" | "shapes";
 export const allTrayShortcuts: TrayShortcut[] = ["picture", "text", "sticker", "link", "tape", "ruler", "zoomWindow", "inkToText", "shapes"];
 export const trayShortcutNames: Record<TrayShortcut, string> = {
-  picture: "Picture", text: "Text Box", sticker: "Sticker", link: "Link", tape: "Study Tape", ruler: "Ruler",
-  zoomWindow: "Zoom Window", inkToText: "Handwriting to Text", shapes: "Shapes",
+  picture: tn("Picture"), text: tn("Text Box"), sticker: tn("Sticker"), link: tn("Link"), tape: tn("Study Tape"), ruler: tn("Ruler"),
+  zoomWindow: tn("Zoom Window"), inkToText: tn("Handwriting to Text"), shapes: tn("Shapes"),
 };
 
 export interface Settings {
@@ -158,7 +159,7 @@ export function folderPath(folders: Folder[], id: string | null): string {
 }
 
 export function newFolder(name: string, parent: string | null): Folder {
-  return { id: uuid(), name: name.trim() || "New Folder", parent };
+  return { id: uuid(), name: name.trim() || t("New Folder"), parent };
 }
 
 export async function loadShelves(fs: FS): Promise<SmartShelf[]> {

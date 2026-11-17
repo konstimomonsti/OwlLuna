@@ -7,9 +7,11 @@ import {
 import { useState, type ReactNode } from "react";
 import { useStore } from "zustand";
 import { anchorAbove, IconButton, Menu, MenuBreak, MenuRow, Segmented, type MenuAnchor } from "../design/controls";
+import { t, tn } from "../i18n";
+import { inkKindName } from "../i18n/names";
 import { uuid } from "../model/ids";
 import {
-  clampWidth, colorFromHex, colorName, hexCSS, inkKindNames, inkKinds, maxPens, opacityOf, paletteFor, rgbaCSS, shapeKinds, tintOf, widthAt, widthRanges,
+  clampWidth, colorFromHex, colorName, hexCSS, inkKinds, maxPens, opacityOf, paletteFor, rgbaCSS, shapeKinds, tintOf, widthAt, widthRanges,
   widthTravel, withOpacity, withTint, type EraserMode, type InkKind, type ShapeKind, type ToolPreset,
 } from "../model/tools";
 import { updateSettings, useApp } from "../state/app";
@@ -41,7 +43,7 @@ export function InkBlot(props: { pen: ToolPreset; size?: number }) {
 const shapeIcons: Record<ShapeKind, ReactNode> = {
   line: <Slash />, arrow: <MoveUpRight />, circle: <Circle />, rectangle: <Square />, triangle: <Triangle />,
 };
-const shapeNames: Record<ShapeKind, string> = { line: "Line", arrow: "Arrow", circle: "Circle", rectangle: "Rectangle", triangle: "Triangle" };
+const shapeNames: Record<ShapeKind, string> = { line: tn("Line"), arrow: tn("Arrow"), circle: tn("Circle"), rectangle: tn("Rectangle"), triangle: tn("Triangle") };
 
 export interface TrayActions {
   addPicture(): void;
@@ -76,18 +78,18 @@ export function ToolTray(props: { session: Session; actions: TrayActions }) {
 
   const shortcut = (name: TrayShortcut): ReactNode => {
     switch (name) {
-      case "picture": return <IconButton key={name} label="Picture" onClick={props.actions.addPicture} testid="tool-picture"><Image /></IconButton>;
-      case "text": return <IconButton key={name} label="Text Box" on={tool.kind === "text"} onClick={() => setTool(session, { kind: "text" })} testid="tool-text"><Type /></IconButton>;
-      case "sticker": return <IconButton key={name} label="Sticker" onClick={(event) => props.actions.addSticker(anchorAbove(event.currentTarget))} testid="tool-sticker"><StickyNote /></IconButton>;
-      case "link": return <IconButton key={name} label="Link" onClick={props.actions.addLink} testid="tool-link"><Link2 /></IconButton>;
-      case "tape": return <IconButton key={name} label="Study Tape" on={tool.kind === "tape"} onClick={() => setTool(session, { kind: "tape" })} testid="tool-tape"><Tally1 style={{ transform: "rotate(90deg) scale(1.3)" }} /></IconButton>;
-      case "ruler": return <IconButton key={name} label="Ruler" on={ruler} onClick={props.actions.toggleRuler} testid="tool-ruler"><Ruler /></IconButton>;
-      case "zoomWindow": return <IconButton key={name} label="Zoom Window" on={zoomWindow} onClick={props.actions.toggleZoomWindow} testid="tool-zoom-window"><ZoomIn /></IconButton>;
-      case "inkToText": return <IconButton key={name} label="Handwriting to Text" onClick={props.actions.inkToText} testid="tool-ink-to-text"><Languages /></IconButton>;
+      case "picture": return <IconButton key={name} label={t("Picture")} onClick={props.actions.addPicture} testid="tool-picture"><Image /></IconButton>;
+      case "text": return <IconButton key={name} label={t("Text Box")} on={tool.kind === "text"} onClick={() => setTool(session, { kind: "text" })} testid="tool-text"><Type /></IconButton>;
+      case "sticker": return <IconButton key={name} label={t("Sticker")} onClick={(event) => props.actions.addSticker(anchorAbove(event.currentTarget))} testid="tool-sticker"><StickyNote /></IconButton>;
+      case "link": return <IconButton key={name} label={t("Link")} onClick={props.actions.addLink} testid="tool-link"><Link2 /></IconButton>;
+      case "tape": return <IconButton key={name} label={t("Study Tape")} on={tool.kind === "tape"} onClick={() => setTool(session, { kind: "tape" })} testid="tool-tape"><Tally1 style={{ transform: "rotate(90deg) scale(1.3)" }} /></IconButton>;
+      case "ruler": return <IconButton key={name} label={t("Ruler")} on={ruler} onClick={props.actions.toggleRuler} testid="tool-ruler"><Ruler /></IconButton>;
+      case "zoomWindow": return <IconButton key={name} label={t("Zoom Window")} on={zoomWindow} onClick={props.actions.toggleZoomWindow} testid="tool-zoom-window"><ZoomIn /></IconButton>;
+      case "inkToText": return <IconButton key={name} label={t("Handwriting to Text")} onClick={props.actions.inkToText} testid="tool-ink-to-text"><Languages /></IconButton>;
       case "shapes": return (
         <IconButton
           key={name}
-          label={`Shapes: ${shapeNames[shape]}`}
+          label={t("Shapes: {shape}", { shape: t(shapeNames[shape]) })}
           on={tool.kind === "shape"}
           testid="tool-shapes"
           onClick={(event) => {
@@ -103,15 +105,15 @@ export function ToolTray(props: { session: Session; actions: TrayActions }) {
 
   const editing = menu?.kind === "pen" ? pens.find((pen) => pen.id === menu.id) : undefined;
   return (
-    <div className="tool-tray board" data-testid="tool-tray" style={{ flexDirection: leftHanded ? "row-reverse" : "row" }} role="toolbar" aria-label="Tools">
+    <div className="tool-tray board" data-testid="tool-tray" style={{ flexDirection: leftHanded ? "row-reverse" : "row" }} role="toolbar" aria-label={t("Tools")}>
       <div className="row" style={{ gap: 2 }}>
         {pens.map((pen, index) => (
           <button
             key={pen.id}
             type="button"
             className={`pen-label${tool.kind === "pen" && tool.penID === pen.id ? " on" : ""}`}
-            title={`${inkKindNames[pen.ink]}, ${colorName(pen.color)}`}
-            aria-label={`${inkKindNames[pen.ink]}, ${colorName(pen.color)}`}
+            title={`${inkKindName(pen.ink)}, ${t(colorName(pen.color))}`}
+            aria-label={`${inkKindName(pen.ink)}, ${t(colorName(pen.color))}`}
             aria-pressed={tool.kind === "pen" && tool.penID === pen.id}
             data-testid={`pen-${index}`}
             onClick={(event) => pickPen(pen, event.currentTarget)}
@@ -119,12 +121,12 @@ export function ToolTray(props: { session: Session; actions: TrayActions }) {
             <InkBlot pen={pen} />
           </button>
         ))}
-        {pens.length < maxPens && <IconButton label="Add Pen" onClick={addPen} testid="add-pen"><Plus /></IconButton>}
+        {pens.length < maxPens && <IconButton label={t("Add Pen")} onClick={addPen} testid="add-pen"><Plus /></IconButton>}
       </div>
       <div className="tray-rule" />
       <div className="row" style={{ gap: 2 }}>
         <IconButton
-          label="Eraser"
+          label={t("Eraser")}
           on={tool.kind === "eraser"}
           testid="tool-eraser"
           onClick={(event) => {
@@ -134,8 +136,8 @@ export function ToolTray(props: { session: Session; actions: TrayActions }) {
         >
           <Eraser />
         </IconButton>
-        <IconButton label="Lasso" on={tool.kind === "lasso"} onClick={() => setTool(session, { kind: "lasso" })} testid="tool-lasso"><Lasso /></IconButton>
-        <IconButton label="Move the Page" on={tool.kind === "hand"} onClick={() => setTool(session, { kind: "hand" })} testid="tool-hand"><Hand /></IconButton>
+        <IconButton label={t("Lasso")} on={tool.kind === "lasso"} onClick={() => setTool(session, { kind: "lasso" })} testid="tool-lasso"><Lasso /></IconButton>
+        <IconButton label={t("Move the Page")} on={tool.kind === "hand"} onClick={() => setTool(session, { kind: "hand" })} testid="tool-hand"><Hand /></IconButton>
       </div>
       {shortcuts.length > 0 && <div className="tray-rule" />}
       <div className="row" style={{ gap: 2 }}>{shortcuts.map(shortcut)}</div>
@@ -143,10 +145,10 @@ export function ToolTray(props: { session: Session; actions: TrayActions }) {
       {editing && menu?.kind === "pen" && <PenOptions pen={editing} anchor={menu.anchor} canDelete={pens.length > 1} onClose={() => setMenu(null)} session={session} />}
       {menu?.kind === "eraser" && <EraserOptions anchor={menu.anchor} onClose={() => setMenu(null)} />}
       {menu?.kind === "shapes" && (
-        <Menu anchor={menu.anchor} title="Shapes" onClose={() => setMenu(null)}>
+        <Menu anchor={menu.anchor} title={t("Shapes")} onClose={() => setMenu(null)}>
           {shapeKinds.map((kind) => (
             <MenuRow key={kind} icon={shapeIcons[kind]} chosen={kind === shape} onClick={() => { session.setState({ shape: kind }); setTool(session, { kind: "shape", shape: kind }); setMenu(null); }}>
-              {shapeNames[kind]}
+              {t(shapeNames[kind])}
             </MenuRow>
           ))}
         </Menu>
@@ -195,7 +197,7 @@ function PenOptions(props: { pen: ToolPreset; anchor: MenuAnchor; canDelete: boo
   const [h, s, v] = hexToHsv(hexCSS(pen.color));
   const setHSV = (nh: number, ns: number, nv: number) => change({ color: withTint(pen.color, colorFromHex(hsvToHex(nh, ns, nv))) });
   return (
-    <Menu anchor={props.anchor} title={inkKindNames[pen.ink]} onClose={props.onClose} width={296} testid="pen-options">
+    <Menu anchor={props.anchor} title={inkKindName(pen.ink)} onClose={props.onClose} width={296} testid="pen-options">
       <div className="pen-options" onPointerDown={(event) => event.stopPropagation()}>
         <div className="kind-grid">
           {inkKinds.map((kind) => (
@@ -217,7 +219,7 @@ function PenOptions(props: { pen: ToolPreset; anchor: MenuAnchor; canDelete: boo
               }}
             >
               <InkBlot pen={{ ...pen, ink: kind, width: widthAt(0.45, kind) }} size={26} />
-              <span>{inkKindNames[kind]}</span>
+              <span>{inkKindName(kind)}</span>
             </button>
           ))}
         </div>
@@ -228,32 +230,32 @@ function PenOptions(props: { pen: ToolPreset; anchor: MenuAnchor; canDelete: boo
               type="button"
               className={`swatch${tintOf(pen.color) === color ? " on" : ""}`}
               style={{ background: hexCSS(color) }}
-              title={colorName(color)}
-              aria-label={colorName(color)}
+              title={t(colorName(color))}
+              aria-label={t(colorName(color))}
               aria-pressed={tintOf(pen.color) === color}
               data-testid={`swatch-${hexCSS(color).slice(1)}`}
               onClick={() => change({ color: withTint(pen.color, color) })}
             />
           ))}
-          <button type="button" className={`swatch mix${mixing ? " on" : ""}`} title="Mix a Colour" aria-label="Mix a Colour" aria-pressed={mixing} onClick={() => setMixing(!mixing)} data-testid="mix-colour" />
+          <button type="button" className={`swatch mix${mixing ? " on" : ""}`} title={t("Mix a Colour")} aria-label={t("Mix a Colour")} aria-pressed={mixing} onClick={() => setMixing(!mixing)} data-testid="mix-colour" />
         </div>
         {mixing && (
           <div className="mixer">
             <span className="blot" style={{ background: hexCSS(pen.color) }} />
             <div className="grow column" style={{ gap: 6 }}>
-              <Strip label="Hue" value={h} max={360} onChange={(value) => setHSV(value, Math.max(s, 0.5), Math.max(v, 0.35))} background="linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)" testid="hue-strip" />
-              <Strip label="Shade" value={v} max={1} onChange={(value) => setHSV(h, s, value)} background={`linear-gradient(90deg, #000, ${hsvToHex(h, Math.max(s, 0.5), 1)})`} />
-              <Strip label="Strength" value={s} max={1} onChange={(value) => setHSV(h, value, v)} background={`linear-gradient(90deg, ${hsvToHex(h, 0, v)}, ${hsvToHex(h, 1, v)})`} />
+              <Strip label={t("Hue")} value={h} max={360} onChange={(value) => setHSV(value, Math.max(s, 0.5), Math.max(v, 0.35))} background="linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)" testid="hue-strip" />
+              <Strip label={t("Shade")} value={v} max={1} onChange={(value) => setHSV(h, s, value)} background={`linear-gradient(90deg, #000, ${hsvToHex(h, Math.max(s, 0.5), 1)})`} />
+              <Strip label={t("Strength")} value={s} max={1} onChange={(value) => setHSV(h, value, v)} background={`linear-gradient(90deg, ${hsvToHex(h, 0, v)}, ${hsvToHex(h, 1, v)})`} />
             </div>
           </div>
         )}
         <label className="slider-row">
-          <span>Width</span>
+          <span>{t("Width")}</span>
           <input type="range" min={0} max={1} step={0.005} value={widthTravel(pen)} data-testid="pen-width" onChange={(event) => change({ width: widthAt(Number(event.target.value), pen.ink) })} />
           <span className="meta">{pen.width < 10 ? pen.width.toFixed(1) : Math.round(pen.width)} pt</span>
         </label>
         <label className="slider-row">
-          <span>Opacity</span>
+          <span>{t("Opacity")}</span>
           <input type="range" min={0.1} max={1} step={0.01} value={opacityOf(pen.color)} data-testid="pen-opacity" onChange={(event) => change({ color: withOpacity(pen.color, Number(event.target.value)) })} />
           <span className="meta">{Math.round(opacityOf(pen.color) * 100)}%</span>
         </label>
@@ -271,7 +273,7 @@ function PenOptions(props: { pen: ToolPreset; anchor: MenuAnchor; canDelete: boo
           props.onClose();
         }}
       >
-        Remove This Pen
+        {t("Remove This Pen")}
       </MenuRow>
     </Menu>
   );
@@ -281,19 +283,19 @@ function EraserOptions(props: { anchor: MenuAnchor; onClose: () => void }) {
   const mode = useApp((state) => state.settings.eraserMode);
   const width = useApp((state) => state.settings.eraserWidth);
   return (
-    <Menu anchor={props.anchor} title="Eraser" onClose={props.onClose} width={300} testid="eraser-options">
+    <Menu anchor={props.anchor} title={t("Eraser")} onClose={props.onClose} width={300} testid="eraser-options">
       <div className="pen-options" onPointerDown={(event) => event.stopPropagation()}>
         <Segmented<EraserMode>
-          label="What the eraser takes"
+          label={t("What the eraser takes")}
           value={mode}
           onChange={(value) => updateSettings({ eraserMode: value })}
-          options={[{ value: "stroke", label: "Strokes" }, { value: "partial", label: "Parts" }, { value: "highlighter", label: "Highlighter" }]}
+          options={[{ value: "stroke", label: t("Strokes") }, { value: "partial", label: t("Parts") }, { value: "highlighter", label: t("Highlighter") }]}
         />
         <p className="secondary" style={{ fontSize: 12 }}>
-          {mode === "stroke" ? "Takes each whole stroke it touches." : mode === "partial" ? "Rubs out only what is under it." : "Takes highlighter and leaves everything else."}
+          {mode === "stroke" ? t("Takes each whole stroke it touches.") : mode === "partial" ? t("Rubs out only what is under it.") : t("Takes highlighter and leaves everything else.")}
         </p>
         <label className="slider-row">
-          <span>Size</span>
+          <span>{t("Size")}</span>
           <input type="range" min={4} max={60} step={1} value={width} onChange={(event) => updateSettings({ eraserWidth: Number(event.target.value) })} />
           <span className="meta">{width} pt</span>
         </label>

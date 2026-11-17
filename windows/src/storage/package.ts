@@ -6,6 +6,7 @@ import { decodeManifest, encodeManifest, inkPath, type Manifest } from "../model
 import { decodeCards, encodeCards, type Flashcard } from "../model/flashcard";
 import { uuid } from "../model/ids";
 import { listAll, readText, type FS } from "../platform/fs";
+import { t } from "../i18n";
 
 export const PACKAGE_SUFFIX = ".owlluna";
 
@@ -34,7 +35,7 @@ export class UnreadableNotebook extends Error {
 export async function loadManifest(fs: FS, id: string): Promise<Manifest> {
   const path = `${packageDir(id)}/manifest.json`;
   const text = await readText(fs, path);
-  if (text === null) throw new UnreadableNotebook(id, "The notebook has no manifest.");
+  if (text === null) throw new UnreadableNotebook(id, t("The notebook has no manifest."));
   try {
     const manifest = decodeManifest(text);
     // The folder names the notebook: a copied folder must not answer to another's ID.

@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import "./i18n/bind";
 import App from "./App";
 import Audience from "./present/Audience";
 import "./design/tokens.css";

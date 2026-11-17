@@ -13,6 +13,7 @@ import { CardFace, useCardImage } from "./CardFace";
 import { addCard, clearEdit, ensureCards, removeCard, updateCard, useCards } from "./cardStore";
 import { dueAmong, deckSentence } from "./queue";
 import { Review } from "./Review";
+import { t, tp } from "../i18n";
 
 type Mode = { kind: "list" } | { kind: "edit"; cardID: string | "new" };
 
@@ -61,24 +62,24 @@ export function DeckSheet(props: { doc: NotebookDocument; session: Session; onCl
   }
 
   const remove = async (card: Flashcard) => {
-    if (await confirm({ title: "Delete this card?", message: "Its clippings are deleted with it.", confirm: "Delete", destructive: true })) {
+    if (await confirm({ title: t("Delete this card?"), message: t("Its clippings are deleted with it."), confirm: t("Delete"), destructive: true })) {
       await removeCard(doc.fs, doc.id, card.id);
     }
   };
 
   return (
     <Sheet
-      title="Flashcards"
+      title={t("Flashcards")}
       wide
       testid="deck-sheet"
       onClose={props.onClose}
       foot={
         <>
-          <button type="button" className="btn" onClick={() => setMode({ kind: "edit", cardID: "new" })} data-testid="new-card"><Plus /> New Card</button>
+          <button type="button" className="btn" onClick={() => setMode({ kind: "edit", cardID: "new" })} data-testid="new-card"><Plus /> {t("New Card")}</button>
           {due > 0 ? (
-            <button type="button" className="btn primary" onClick={() => setReviewing("due")} data-testid="study-cards">{due === 1 ? "Study 1 Card" : `Study ${due} Cards`}</button>
+            <button type="button" className="btn primary" onClick={() => setReviewing("due")} data-testid="study-cards">{tp(due, "Study {count} Card", "Study {count} Cards")}</button>
           ) : (
-            <button type="button" className="btn" disabled={list.length === 0} onClick={() => setReviewing("all")} data-testid="study-all">Study All Anyway</button>
+            <button type="button" className="btn" disabled={list.length === 0} onClick={() => setReviewing("all")} data-testid="study-all">{t("Study All Anyway")}</button>
           )}
         </>
       }
@@ -87,27 +88,27 @@ export function DeckSheet(props: { doc: NotebookDocument; session: Session; onCl
         <span className="secondary" data-testid="deck-counts">{deckSentence(list, due)}</span>
       </div>
       {list.length === 0 ? (
-        <EmptyPlate icon={<Layers />} title="No cards yet">Lift a strip of study tape or select handwriting and press the cards button, or make one by hand.</EmptyPlate>
+        <EmptyPlate icon={<Layers />} title={t("No cards yet")}>{t("Lift a strip of study tape or select handwriting and press the cards button, or make one by hand.")}</EmptyPlate>
       ) : (
         <div className="deck-grid" data-testid="deck-grid">
           {list.map((card) => {
             const back = turned.has(card.id);
             return (
               <div key={card.id} className="index-card deck-card" data-testid="deck-card" data-card={card.id}>
-                <span className="side-name">{back ? "Back" : "Front"}</span>
+                <span className="side-name">{back ? t("Back") : t("Front")}</span>
                 <div className="tools">
-                  <IconButton label="Edit Card" onClick={() => setMode({ kind: "edit", cardID: card.id })} testid="card-edit"><Pencil /></IconButton>
-                  <IconButton label="Delete Card" onClick={() => void remove(card)} testid="card-delete"><Trash2 /></IconButton>
+                  <IconButton label={t("Edit Card")} onClick={() => setMode({ kind: "edit", cardID: card.id })} testid="card-edit"><Pencil /></IconButton>
+                  <IconButton label={t("Delete Card")} onClick={() => void remove(card)} testid="card-delete"><Trash2 /></IconButton>
                 </div>
                 <button
                   type="button"
                   className="face"
                   onClick={() => setTurned((now) => { const next = new Set(now); if (next.has(card.id)) next.delete(card.id); else next.add(card.id); return next; })}
-                  title="Turn the card over"
+                  title={t("Turn the card over")}
                   data-testid="card-flip"
                 >
-                  <CardFace fs={doc.fs} notebook={doc.id} side={back ? card.back : card.front} empty="(empty)" />
-                  <span className="due-mark">{card.due <= day ? "Due" : `Due ${card.due}`}</span>
+                  <CardFace fs={doc.fs} notebook={doc.id} side={back ? card.back : card.front} empty={t("(empty)")} />
+                  <span className="due-mark">{card.due <= day ? t("Due") : t("Due {date}", { date: card.due })}</span>
                 </button>
               </div>
             );
@@ -128,7 +129,7 @@ function SideEditor(props: { doc: NotebookDocument; name: string; side: CardSide
       {side.image && (
         <div className="clip-box">
           {url && <img className="card-clip" src={url} alt="" draggable={false} data-testid={`${props.testid}-clip`} />}
-          <button type="button" className="btn small flat" onClick={() => { props.onRemoveImage(side.image!); props.onChange({ text: side.text, imageText: undefined }); }} data-testid={`${props.testid}-clip-remove`}><X /> Remove Clipping</button>
+          <button type="button" className="btn small flat" onClick={() => { props.onRemoveImage(side.image!); props.onChange({ text: side.text, imageText: undefined }); }} data-testid={`${props.testid}-clip-remove`}><X /> {t("Remove Clipping")}</button>
         </div>
       )}
     </div>
@@ -159,20 +160,20 @@ function CardEditor(props: { doc: NotebookDocument; card: Flashcard | null; onCl
 
   return (
     <Sheet
-      title={card ? "Edit Card" : "New Card"}
+      title={card ? t("Edit Card") : t("New Card")}
       wide
       testid="card-editor"
       onClose={props.onClose}
       foot={
         <>
-          <button type="button" className="btn flat" onClick={props.onClose} data-testid="card-cancel">Cancel</button>
-          <button type="button" className="btn primary" disabled={sideIsEmpty(front) && sideIsEmpty(back)} onClick={() => void save()} data-testid="card-save">Save</button>
+          <button type="button" className="btn flat" onClick={props.onClose} data-testid="card-cancel">{t("Cancel")}</button>
+          <button type="button" className="btn primary" disabled={sideIsEmpty(front) && sideIsEmpty(back)} onClick={() => void save()} data-testid="card-save">{t("Save")}</button>
         </>
       }
     >
       <div className="card-editor">
-        <SideEditor doc={doc} name="Front" side={front} onChange={setFront} onRemoveImage={(file) => setDropped((now) => [...now, file])} testid="front" />
-        <SideEditor doc={doc} name="Back" side={back} onChange={setBack} onRemoveImage={(file) => setDropped((now) => [...now, file])} testid="back" />
+        <SideEditor doc={doc} name={t("Front")} side={front} onChange={setFront} onRemoveImage={(file) => setDropped((now) => [...now, file])} testid="front" />
+        <SideEditor doc={doc} name={t("Back")} side={back} onChange={setBack} onRemoveImage={(file) => setDropped((now) => [...now, file])} testid="back" />
       </div>
     </Sheet>
   );

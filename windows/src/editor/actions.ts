@@ -9,6 +9,7 @@ import { heldClipping, placed, readClipping, type Clipping } from "./clipboard";
 import type { NotebookDocument } from "./document";
 import { textBoxSize } from "./inkText";
 import { setTool, type Session } from "./session";
+import { t } from "../i18n";
 
 const pictureTypes: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" };
 
@@ -38,34 +39,34 @@ export async function placePicture(doc: NotebookDocument, session: Session, data
   const size = await pictureSize(data);
   const page = doc.page(at.pageID);
   if (!size || !page) {
-    notify("That picture couldn't be read.", "trouble");
+    notify(t("That picture couldn't be read."), "trouble");
     return null;
   }
   const file = await addAsset(doc.fs, doc.id, data, extension === "jpeg" ? "jpg" : extension);
   const room = page.edgeless ? 480 : page.size.w * 0.6;
   const scale = Math.min(1, room / size.w, (page.edgeless ? 480 : page.size.h * 0.6) / size.h);
   const item: PictureItem = { id: uuid(), kind: "image", file, x: at.x, y: at.y, w: size.w * scale, h: size.h * scale, rotation: 0 };
-  doc.addItem(at.pageID, item, "Add Picture");
+  doc.addItem(at.pageID, item, t("Add Picture"));
   pick(session, at.pageID, item.id);
   return item;
 }
 
 export function placeSticker(doc: NotebookDocument, session: Session, name: string, at: PagePoint): void {
   const item: PageItem = { id: uuid(), kind: "sticker", name, x: at.x, y: at.y, w: 72, h: 72, rotation: 0 };
-  doc.addItem(at.pageID, item, "Add Sticker");
+  doc.addItem(at.pageID, item, t("Add Sticker"));
   pick(session, at.pageID, item.id);
 }
 
 export function placeLink(doc: NotebookDocument, session: Session, target: LinkTarget, label: string, at: PagePoint): void {
   const item: PageItem = { id: uuid(), kind: "link", target, label, x: at.x, y: at.y, w: 180, h: 30, rotation: 0 };
-  doc.addItem(at.pageID, item, "Add Link");
+  doc.addItem(at.pageID, item, t("Add Link"));
   pick(session, at.pageID, item.id);
 }
 
 export function placeText(doc: NotebookDocument, session: Session, text: string, at: PagePoint, edit = false): PageItem {
   const { w, h } = textBoxSize(text);
   const item: PageItem = { id: uuid(), kind: "text", string: text, fontSize: 17, x: at.x, y: at.y, w, h, rotation: 0 };
-  doc.addItem(at.pageID, item, "Add Text");
+  doc.addItem(at.pageID, item, t("Add Text"));
   pick(session, at.pageID, item.id);
   if (edit) session.setState({ editingItem: item.id });
   return item;
@@ -83,7 +84,7 @@ export async function pasteClipping(doc: NotebookDocument, session: Session, cli
       item.file = await addAsset(doc.fs, doc.id, data, extensionOf(item.file) || "png");
     }
   }
-  doc.transact("Paste", (draft) => {
+  doc.transact(t("Paste"), (draft) => {
     if (strokes.length) draft.setInk(at.pageID, [...draft.ink(at.pageID), ...strokes]);
     const page = draft.manifest.pages.find((candidate) => candidate.id === at.pageID);
     if (items.length && page) page.items.push(...items);
@@ -114,7 +115,7 @@ export async function pasteFromClipboard(doc: NotebookDocument, session: Session
 
 /** Changes where an existing link goes and what it says. */
 export function updateLink(doc: NotebookDocument, pageID: string, itemID: string, target: LinkTarget, label: string): void {
-  doc.updateItem(pageID, itemID, "Edit Link", (item) => {
+  doc.updateItem(pageID, itemID, t("Edit Link"), (item) => {
     if (item.kind !== "link") return;
     item.target = target;
     item.label = label;

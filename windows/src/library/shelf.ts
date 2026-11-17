@@ -1,12 +1,13 @@
 // What the shelf shows for a scope, in what order. Pure, so the rules are testable apart from the screen.
 
+import { locale, t, tn } from "../i18n";
 import type { Manifest } from "../model/notebook";
 import { shelfMatches, type Folder, type Settings, type SmartShelf } from "../storage/libraryFiles";
 import type { Scope } from "../state/app";
 
 export type SortKey = Settings["librarySort"];
 
-export const sortNames: Record<SortKey, string> = { modified: "Date Modified", created: "Date Created", title: "Title" };
+export const sortNames: Record<SortKey, string> = { modified: tn("Date Modified"), created: tn("Date Created"), title: tn("Title") };
 
 export function inScope(manifest: Manifest, scope: Scope, shelves: SmartShelf[]): boolean {
   if (scope.kind === "trash") return manifest.trashedAt !== null;
@@ -25,7 +26,7 @@ export function inScope(manifest: Manifest, scope: Scope, shelves: SmartShelf[])
 
 export function sortNotebooks(list: Manifest[], key: SortKey): Manifest[] {
   const out = [...list];
-  if (key === "title") out.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base", numeric: true }));
+  if (key === "title") out.sort((a, b) => a.title.localeCompare(b.title, locale(), { sensitivity: "base", numeric: true }));
   else if (key === "created") out.sort((a, b) => b.createdAt - a.createdAt);
   else out.sort((a, b) => b.modifiedAt - a.modifiedAt);
   return out;
@@ -33,12 +34,12 @@ export function sortNotebooks(list: Manifest[], key: SortKey): Manifest[] {
 
 export function scopeTitle(scope: Scope, folders: Folder[], shelves: SmartShelf[]): string {
   switch (scope.kind) {
-    case "all": return "All Notebooks";
-    case "favourites": return "Favourites";
-    case "trash": return "Recently Deleted";
+    case "all": return t("All Notebooks");
+    case "favourites": return t("Favourites");
+    case "trash": return t("Recently Deleted");
     case "tag": return `#${scope.tag}`;
-    case "folder": return folders.find((folder) => folder.id === scope.id)?.name ?? "Folder";
-    case "shelf": return shelves.find((shelf) => shelf.id === scope.id)?.name ?? "Smart Shelf";
+    case "folder": return folders.find((folder) => folder.id === scope.id)?.name ?? t("Folder");
+    case "shelf": return shelves.find((shelf) => shelf.id === scope.id)?.name ?? t("Smart Shelf");
   }
 }
 

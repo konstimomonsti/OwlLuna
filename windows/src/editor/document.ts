@@ -6,6 +6,7 @@ import { encodeInk, type Stroke } from "../model/ink";
 import { duplicatedPage, newPage, usedAssets, type Manifest, type Page, type PageItem } from "../model/notebook";
 import type { FS } from "../platform/fs";
 import { loadInk, saveInk, saveManifest, sweepAssets } from "../storage/package";
+import { t } from "../i18n";
 
 interface Step {
   label: string;
@@ -204,13 +205,13 @@ export class NotebookDocument {
 
   // Ink
 
-  addStrokes(pageID: string, strokes: Stroke[], label = "Write"): void {
+  addStrokes(pageID: string, strokes: Stroke[], label = t("Write")): void {
     if (strokes.length === 0) return;
     this.transact(label, (draft) => draft.setInk(pageID, [...draft.ink(pageID), ...strokes]));
     this.onWrote?.(pageID, strokes.length);
   }
 
-  removeStrokes(pageID: string, ids: Set<string>, label = "Erase"): void {
+  removeStrokes(pageID: string, ids: Set<string>, label = t("Erase")): void {
     if (ids.size === 0) return;
     this.transact(label, (draft) => draft.setInk(pageID, draft.ink(pageID).filter((stroke) => !ids.has(stroke.id))));
   }
@@ -222,7 +223,7 @@ export class NotebookDocument {
   // Pages
 
   /** Adds a page after `afterID` (or at the end), like the page before it unless one is given. */
-  addPage(afterID: string | null, page?: Page, label = "Add Page"): Page {
+  addPage(afterID: string | null, page?: Page, label = t("Add Page")): Page {
     const index = afterID ? this.pageIndex(afterID) : this.manifest.pages.length - 1;
     const model = this.manifest.pages[Math.max(index, 0)];
     const added = page ?? newPage(this.manifest.defaults, model && !model.edgeless
@@ -232,7 +233,7 @@ export class NotebookDocument {
     return added;
   }
 
-  insertPages(at: number, pages: Page[], inks: Map<string, Stroke[]> = new Map(), label = "Add Pages"): void {
+  insertPages(at: number, pages: Page[], inks: Map<string, Stroke[]> = new Map(), label = t("Add Pages")): void {
     this.transact(label, (draft) => {
       draft.manifest.pages.splice(Math.min(Math.max(at, 0), draft.manifest.pages.length), 0, ...pages);
       for (const [pageID, strokes] of inks) draft.setInk(pageID, strokes);
@@ -244,7 +245,7 @@ export class NotebookDocument {
     const doomed = new Set(ids);
     // Their ink is loaded first, so undo can bring it back and the save removes the files.
     for (const id of doomed) await this.ensureInk(id);
-    this.transact(doomed.size === 1 ? "Delete Page" : "Delete Pages", (draft) => {
+    this.transact(doomed.size === 1 ? t("Delete Page") : t("Delete Pages"), (draft) => {
       const manifest = draft.manifest;
       manifest.pages = manifest.pages.filter((page) => !doomed.has(page.id));
       if (manifest.pages.length === 0) manifest.pages.push(newPage(manifest.defaults, manifest.kind === "whiteboard" ? { edgeless: true } : {}));
@@ -257,7 +258,7 @@ export class NotebookDocument {
     if (!source) return null;
     const ink = await this.ensureInk(pageID);
     const copy = duplicatedPage(source);
-    this.transact("Duplicate Page", (draft) => {
+    this.transact(t("Duplicate Page"), (draft) => {
       draft.manifest.pages.splice(this.pageIndex(pageID) + 1, 0, copy);
       draft.setInk(copy.id, ink.map((stroke) => ({ ...stroke })));
     });
@@ -265,7 +266,7 @@ export class NotebookDocument {
   }
 
   movePage(pageID: string, toIndex: number): void {
-    this.transact("Move Page", (draft) => {
+    this.transact(t("Move Page"), (draft) => {
       const pages = draft.manifest.pages;
       const from = pages.findIndex((page) => page.id === pageID);
       if (from === -1) return;
@@ -283,7 +284,7 @@ export class NotebookDocument {
 
   // Items
 
-  addItem(pageID: string, item: PageItem, label = "Add"): void {
+  addItem(pageID: string, item: PageItem, label = t("Add")): void {
     this.updatePage(pageID, label, (page) => void page.items.push(item));
   }
 
@@ -294,7 +295,7 @@ export class NotebookDocument {
     });
   }
 
-  removeItems(pageID: string, ids: Set<string>, label = "Delete"): void {
+  removeItems(pageID: string, ids: Set<string>, label = t("Delete")): void {
     this.updatePage(pageID, label, (page) => {
       page.items = page.items.filter((item) => !ids.has(item.id));
     });

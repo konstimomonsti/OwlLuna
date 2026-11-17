@@ -14,6 +14,7 @@ import type { PageSurface } from "./pageSurface";
 import { draggedShape, holdDuration, holdSlop, loopOutline, recognizeShape, scribbleErased, shapePolylines, type SnappedShape } from "./shapeSnap";
 import { snapToLine } from "./pdfText";
 import { capturePointer, stepsAlong } from "./pointer";
+import { t } from "../i18n";
 
 export interface PagePoint {
   pageID: string;
@@ -422,7 +423,7 @@ export class InkController {
         if (done) return;
         finish(false);
         if (snapped) {
-          env.doc.addStrokes(start.pageID, snapped, "Draw Shape");
+          env.doc.addStrokes(start.pageID, snapped, t("Draw Shape"));
           return;
         }
         if (travelled < TAP_SLOP && performance.now() - began < TAP_TIME && env.tap(start, lifted)) return;
@@ -434,7 +435,7 @@ export class InkController {
           const ink = env.doc.ink(start.pageID);
           const struck = scribbleErased(points, ink.map(strokePoints));
           if (struck.length > 0) {
-            env.doc.removeStrokes(start.pageID, new Set(struck.map((index) => ink[index].id)), "Scribble to Erase");
+            env.doc.removeStrokes(start.pageID, new Set(struck.map((index) => ink[index].id)), t("Scribble to Erase"));
             return;
           }
         }
@@ -446,7 +447,7 @@ export class InkController {
             env.doc.addStrokes(start.pageID, [{
               id: uuid(), ink: pen.ink, color: pen.color, width: snap.height, at, even: true,
               pts: [snap.from.x, snap.from.y, 0.5, 0, snap.to.x, snap.to.y, 0.5, Math.max(Math.round(performance.now() - began), 16)],
-            }], "Highlight Line");
+            }], t("Highlight Line"));
             return;
           }
         }
@@ -501,7 +502,7 @@ export class InkController {
     const end = (commit: boolean) => {
       for (const pageID of working.keys()) env.surface(pageID)?.setOverride(null);
       if (commit && changed.size > 0) {
-        env.doc.transact("Erase", (draft) => {
+        env.doc.transact(t("Erase"), (draft) => {
           for (const pageID of changed) draft.setInk(pageID, working.get(pageID)!);
         });
       }
@@ -572,14 +573,14 @@ export class InkController {
           const here = env.toPage(target.pageID, at.clientX, at.clientY);
           const offsetX = here.x - start.x, offsetY = here.y - start.y;
           const carried = strokes.map((stroke) => transformStroke(stroke, offsetX, offsetY, 1, { x: 0, y: 0 }, true));
-          env.doc.transact("Move Ink", (draft) => {
+          env.doc.transact(t("Move Ink"), (draft) => {
             draft.setInk(pageID, draft.ink(pageID).filter((stroke) => !ids.has(stroke.id)));
             draft.setInk(target.pageID, [...draft.ink(target.pageID), ...carried]);
           });
           env.session.setState({ selection: { pageID: target.pageID, ids: carried.map((stroke) => stroke.id) } });
           return;
         }
-        env.doc.transact(handle ? "Resize Ink" : "Move Ink", (draft) => {
+        env.doc.transact(handle ? t("Resize Ink") : t("Move Ink"), (draft) => {
           draft.setInk(pageID, draft.ink(pageID).map((stroke) => (ids.has(stroke.id) ? transformStroke(stroke, dx, dy, scale, origin) : stroke)));
         });
       },
@@ -635,7 +636,7 @@ export class InkController {
       },
       up: () => {
         surface?.setLive(null);
-        if (strokes.length) env.doc.addStrokes(start.pageID, strokes, "Draw Shape");
+        if (strokes.length) env.doc.addStrokes(start.pageID, strokes, t("Draw Shape"));
       },
       cancel: () => surface?.setLive(null),
     };
@@ -660,7 +661,7 @@ export class InkController {
         }
         const w = Math.max(rect.w, 16), h = Math.max(rect.h, 14);
         const mustard = "mustard" as const;
-        env.doc.addItem(start.pageID, { id: uuid(), kind: "tape", color: mustard, x: rect.x + rect.w / 2, y: rect.y + rect.h / 2, w, h, rotation: 0 }, "Add Study Tape");
+        env.doc.addItem(start.pageID, { id: uuid(), kind: "tape", color: mustard, x: rect.x + rect.w / 2, y: rect.y + rect.h / 2, w, h, rotation: 0 }, t("Add Study Tape"));
       },
       cancel: () => this.show({ band: undefined }),
     };

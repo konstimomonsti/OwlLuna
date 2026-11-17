@@ -1,6 +1,7 @@
 // The order of a review sitting. A card graded Again comes back a few cards later, until it is remembered.
 
 import type { CardGrade, Flashcard } from "../model/flashcard";
+import { t, tp } from "../i18n";
 
 /** How many other cards are shown before a forgotten one returns. */
 export const AGAIN_GAP = 3;
@@ -61,13 +62,12 @@ export function splitKey(key: string): { notebook: string; cardID: string } {
 
 /** The words under a grade button for the days until the card returns. */
 export function intervalLabel(days: number): string {
-  if (days <= 0) return "now";
-  if (days === 1) return "1 day";
-  if (days < 60) return `${days} days`;
+  if (days <= 0) return t("now");
+  if (days < 60) return tp(days, "{count} day", "{count} days");
   const months = Math.round(days / 30);
-  if (months < 12) return `${months} months`;
+  if (months < 12) return tp(months, "{count} month", "{count} months");
   const years = Math.round((days / 365) * 10) / 10;
-  return years === 1 ? "1 year" : `${years} years`;
+  return tp(years, "{count} year", "{count} years");
 }
 
 /** How many cards of a list are due on `day`, given only their due days. */
@@ -89,10 +89,12 @@ export function summariseDue(perNotebook: Record<string, number>): DueSummary {
 }
 
 export function dueSentence(summary: DueSummary): string {
-  const cards = summary.cards === 1 ? "1 card" : `${summary.cards} cards`;
-  return `${cards} due in ${summary.notebooks === 1 ? "1 notebook" : `${summary.notebooks} notebooks`}`;
+  return t("{cards} due in {notebooks}", {
+    cards: tp(summary.cards, "{count} card", "{count} cards"),
+    notebooks: tp(summary.notebooks, "{count} notebook", "{count} notebooks"),
+  });
 }
 
 export function deckSentence(cards: Flashcard[], due: number): string {
-  return `${cards.length === 1 ? "1 card" : `${cards.length} cards`}, ${due} due today`;
+  return t("{cards}, {due} due today", { cards: tp(cards.length, "{count} card", "{count} cards"), due });
 }

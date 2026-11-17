@@ -8,6 +8,7 @@ import {
   useApp, type Scope,
 } from "../state/app";
 import { folderAndDescendants, shelfMatches, type SmartShelf } from "../storage/libraryFiles";
+import { t } from "../i18n";
 import { beginDrag, dragged, endDrag } from "./drag";
 import { folderTree } from "./shelf";
 import { ShelfSheet } from "./Sheets";
@@ -76,7 +77,7 @@ export function Sidebar() {
       if (!item) return;
       if (item.kind === "notebooks" && accepts.notebooks !== undefined) void moveNotebooks(item.ids, accepts.notebooks);
       else if (item.kind === "folder" && accepts.folders !== undefined) {
-        void moveFolder(item.id, accepts.folders).then((moved) => { if (!moved) notify("A folder can't go inside itself.", "trouble"); });
+        void moveFolder(item.id, accepts.folders).then((moved) => { if (!moved) notify(t("A folder can't go inside itself."), "trouble"); });
       }
     },
   });
@@ -103,7 +104,7 @@ export function Sidebar() {
   );
 
   const newFolder = async (parent: string | null) => {
-    const name = await ask({ title: parent ? "New Subfolder" : "New Folder", confirm: "Create", placeholder: "Folder name" });
+    const name = await ask({ title: parent ? t("New Subfolder") : t("New Folder"), confirm: t("Create"), placeholder: t("Folder name") });
     if (name === null) return;
     const made = await addFolder(name, parent);
     if (parent) setCollapsed((now) => { const next = new Set(now); next.delete(parent); return next; });
@@ -115,23 +116,23 @@ export function Sidebar() {
   return (
     <aside className="sidebar" data-testid="sidebar">
       <div className="sidebar-head"><h2 className="display" style={{ fontSize: 22 }}>OwlLuna</h2></div>
-      <nav className="sidebar-scroll" aria-label="Library">
-        {row({ id: "scope-all", scope: { kind: "all" }, icon: <LibraryIcon />, label: "All Notebooks", count: live.length, accepts: { notebooks: null } })}
-        {row({ id: "scope-favourites", scope: { kind: "favourites" }, icon: <Star />, label: "Favourites", count: live.filter((manifest) => manifest.favourite).length })}
-        {row({ id: "scope-today", scope: { kind: "all" }, icon: <Sunrise />, label: "Today", onClick: () => void openToday() })}
+      <nav className="sidebar-scroll" aria-label={t("Library")}>
+        {row({ id: "scope-all", scope: { kind: "all" }, icon: <LibraryIcon />, label: t("All Notebooks"), count: live.length, accepts: { notebooks: null } })}
+        {row({ id: "scope-favourites", scope: { kind: "favourites" }, icon: <Star />, label: t("Favourites"), count: live.filter((manifest) => manifest.favourite).length })}
+        {row({ id: "scope-today", scope: { kind: "all" }, icon: <Sunrise />, label: t("Today"), onClick: () => void openToday() })}
 
         <div className={`sidebar-section${drop === "folders-head" ? " drop" : ""}`} {...target("folders-head", { folders: null })}>
-          <span className="meta">Folders</span>
-          <IconButton label="New Folder" onClick={() => void newFolder(null)} testid="folder-add"><Plus /></IconButton>
+          <span className="meta">{t("Folders")}</span>
+          <IconButton label={t("New Folder")} onClick={() => void newFolder(null)} testid="folder-add"><Plus /></IconButton>
         </div>
-        {rows.length === 0 && <p className="sidebar-note">Folders you add show up here. Drag one onto another to nest it.</p>}
+        {rows.length === 0 && <p className="sidebar-note">{t("Folders you add show up here. Drag one onto another to nest it.")}</p>}
         {rows.map(({ folder, depth, hasChildren }) => (
           <div key={folder.id} className="sidebar-line" style={{ paddingLeft: depth * 16 }}>
             <button
               type="button"
               className={`disclosure${hasChildren ? "" : " spacer"}`}
               aria-expanded={hasChildren ? !collapsed.has(folder.id) : undefined}
-              aria-label={collapsed.has(folder.id) ? `Expand ${folder.name}` : `Collapse ${folder.name}`}
+              aria-label={collapsed.has(folder.id) ? t("Expand {name}", { name: folder.name }) : t("Collapse {name}", { name: folder.name })}
               tabIndex={hasChildren ? 0 : -1}
               onClick={() => setCollapsed((now) => { const next = new Set(now); if (next.has(folder.id)) next.delete(folder.id); else next.add(folder.id); return next; })}
               data-testid="folder-disclosure"
@@ -143,44 +144,44 @@ export function Sidebar() {
         ))}
 
         <div className="sidebar-section">
-          <span className="meta">Smart Shelves</span>
-          <IconButton label="New Smart Shelf" onClick={() => setShelfSheet({})} testid="shelf-add"><Plus /></IconButton>
+          <span className="meta">{t("Smart Shelves")}</span>
+          <IconButton label={t("New Smart Shelf")} onClick={() => setShelfSheet({})} testid="shelf-add"><Plus /></IconButton>
         </div>
-        {shelves.length === 0 && <p className="sidebar-note">A shelf collects notebooks by their tags.</p>}
+        {shelves.length === 0 && <p className="sidebar-note">{t("A shelf collects notebooks by their tags.")}</p>}
         {shelves.map((shelf) =>
           row({ id: `shelf-${shelf.id}`, scope: { kind: "shelf", id: shelf.id }, icon: <Layers />, label: shelf.name, count: live.filter((manifest) => shelfMatches(shelf, manifest.tags)).length, onContext: (event) => { event.preventDefault(); setMenu({ anchor: { x: event.clientX, y: event.clientY }, shelf }); } }),
         )}
 
         {counts.tags.length > 0 && (
           <>
-            <div className="sidebar-section"><span className="meta">Tags</span></div>
+            <div className="sidebar-section"><span className="meta">{t("Tags")}</span></div>
             {counts.tags.map(([tag, count]) => row({ id: `tag-${tag}`, scope: { kind: "tag", tag }, icon: <Hash />, label: tag, count })) }
           </>
         )}
 
         <div className="sidebar-section" />
-        {row({ id: "scope-trash", scope: { kind: "trash" }, icon: <Trash2 />, label: "Recently Deleted", count: trashCount })}
+        {row({ id: "scope-trash", scope: { kind: "trash" }, icon: <Trash2 />, label: t("Recently Deleted"), count: trashCount })}
       </nav>
       <div className="sidebar-foot">
-        <button type="button" className="btn flat" onClick={() => openCalendar(true)} data-testid="open-calendar"><CalendarDays /> Calendar</button>
-        <button type="button" className="btn flat" onClick={() => openSettings(true)} data-testid="open-settings"><SettingsIcon /> Settings</button>
+        <button type="button" className="btn flat" onClick={() => openCalendar(true)} data-testid="open-calendar"><CalendarDays /> {t("Calendar")}</button>
+        <button type="button" className="btn flat" onClick={() => openSettings(true)} data-testid="open-settings"><SettingsIcon /> {t("Settings")}</button>
       </div>
 
       {menu?.folder && folderMenu && (
         <Menu anchor={menu.anchor} title={folderMenu.name} onClose={close} testid="folder-menu">
-          <MenuRow icon={<FolderPlus />} onClick={() => { close(); void newFolder(folderMenu.id); }} testid="folder-new-sub">New Subfolder…</MenuRow>
+          <MenuRow icon={<FolderPlus />} onClick={() => { close(); void newFolder(folderMenu.id); }} testid="folder-new-sub">{t("New Subfolder…")}</MenuRow>
           <MenuRow
             icon={<Pencil />}
             onClick={async () => {
               close();
-              const name = await ask({ title: "Rename Folder", confirm: "Rename", value: folderMenu.name });
+              const name = await ask({ title: t("Rename Folder"), confirm: t("Rename"), value: folderMenu.name });
               if (name !== null) await renameFolder(folderMenu.id, name);
             }}
             testid="folder-rename"
           >
-            Rename…
+            {t("Rename…")}
           </MenuRow>
-          {folderMenu.parent !== null && <MenuRow icon={<FolderIcon />} onClick={() => { close(); void moveFolder(folderMenu.id, null); }} testid="folder-unnest">Move to Top Level</MenuRow>}
+          {folderMenu.parent !== null && <MenuRow icon={<FolderIcon />} onClick={() => { close(); void moveFolder(folderMenu.id, null); }} testid="folder-unnest">{t("Move to Top Level")}</MenuRow>}
           <MenuBreak />
           <MenuRow
             icon={<Trash2 />}
@@ -188,35 +189,35 @@ export function Sidebar() {
             onClick={async () => {
               close();
               const sure = await confirm({
-                title: `Delete the folder “${folderMenu.name}”?`,
-                message: "Folders inside it go too. The notebooks in them are kept and move up a level.",
-                confirm: "Delete Folder",
+                title: t("Delete the folder “{name}”?", { name: folderMenu.name }),
+                message: t("Folders inside it go too. The notebooks in them are kept and move up a level."),
+                confirm: t("Delete Folder"),
                 destructive: true,
               });
               if (sure) await removeFolder(folderMenu.id);
             }}
             testid="folder-delete"
           >
-            Delete…
+            {t("Delete…")}
           </MenuRow>
         </Menu>
       )}
 
       {menu?.shelf && (
         <Menu anchor={menu.anchor} title={menu.shelf.name} onClose={close} testid="shelf-menu">
-          <MenuRow icon={<Pencil />} onClick={() => { const shelf = menu.shelf; close(); setShelfSheet({ shelf }); }} testid="shelf-edit">Edit…</MenuRow>
+          <MenuRow icon={<Pencil />} onClick={() => { const shelf = menu.shelf; close(); setShelfSheet({ shelf }); }} testid="shelf-edit">{t("Edit…")}</MenuRow>
           <MenuRow
             icon={<Trash2 />}
             destructive
             onClick={async () => {
               const shelf = menu.shelf!;
               close();
-              const sure = await confirm({ title: `Delete the shelf “${shelf.name}”?`, message: "Its notebooks stay where they are; only the shelf goes.", confirm: "Delete Shelf", destructive: true });
+              const sure = await confirm({ title: t("Delete the shelf “{name}”?", { name: shelf.name }), message: t("Its notebooks stay where they are; only the shelf goes."), confirm: t("Delete Shelf"), destructive: true });
               if (sure) await removeShelf(shelf.id);
             }}
             testid="shelf-delete"
           >
-            Delete…
+            {t("Delete…")}
           </MenuRow>
         </Menu>
       )}

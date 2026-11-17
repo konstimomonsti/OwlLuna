@@ -8,6 +8,7 @@ import { notify } from "../state/app";
 import { startRecording, stopRecording, useRecorder } from "../services/recording";
 import { clock } from "./replayMath";
 import type { NotebookDocument } from "./document";
+import { t } from "../i18n";
 
 export function RecorderControl(props: { doc: NotebookDocument }) {
   const { doc } = props;
@@ -30,17 +31,17 @@ export function RecorderControl(props: { doc: NotebookDocument }) {
         <button
           type="button"
           className="btn destructive small"
-          onClick={() => void stopRecording().then((saved) => { if (saved) notify("Recording saved."); }).catch((error) => notify(error instanceof Error ? error.message : String(error), "trouble"))}
+          onClick={() => void stopRecording().then((saved) => { if (saved) notify(t("Recording saved.")); }).catch((error) => notify(error instanceof Error ? error.message : String(error), "trouble"))}
           data-testid="recording-stop"
         >
-          <Square /> Stop
+          <Square /> {t("Stop")}
         </button>
       </div>
     );
   }
   return (
     <IconButton
-      label={recording ? "Another notebook is being recorded" : "Record Audio"}
+      label={recording ? t("Another notebook is being recorded") : t("Record Audio")}
       disabled={recording !== null}
       onClick={() => void startRecording(doc).catch((error) => notify(error instanceof Error ? error.message : String(error), "trouble"))}
       testid="record"

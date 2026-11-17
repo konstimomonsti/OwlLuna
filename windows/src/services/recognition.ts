@@ -3,6 +3,7 @@
 
 import { invoke, isTauri } from "../platform/host";
 import { STRIDE, type Stroke } from "../model/ink";
+import { t } from "../i18n";
 
 export interface RecognisedLine {
   text: string;
@@ -44,12 +45,12 @@ export function decimate(stroke: Pick<Stroke, "pts">, max = MAX_POINTS): [number
 }
 
 function needsWindows(what: string): Error {
-  return new Error(`${what} needs the Windows app.`);
+  return new Error(t("{what} needs the Windows app.", { what }));
 }
 
 /** Reads handwriting. Rejects outside the Windows app, and with Windows' own advice if no recognizer is installed. */
 export async function recogniseInk(strokes: Stroke[], language?: string): Promise<RecognisedInk> {
-  if (!isTauri) throw needsWindows("Handwriting recognition");
+  if (!isTauri) throw needsWindows(t("Handwriting recognition"));
   const points = strokes.map((stroke) => decimate(stroke)).filter((stroke) => stroke.length > 0);
   try {
     return await invoke<RecognisedInk>("ink_recognize", { strokes: points, language: languageTag(language) ?? null });
@@ -70,7 +71,7 @@ export async function recognitionAvailable(): Promise<boolean> {
 
 /** Reads the text in a PNG or JPEG. */
 export async function ocrImage(data: Uint8Array, language?: string): Promise<OcrResult> {
-  if (!isTauri) throw needsWindows("Reading text in images");
+  if (!isTauri) throw needsWindows(t("Reading text in images"));
   const tag = languageTag(language);
   try {
     return await invoke<OcrResult>("ocr_image", data, { headers: tag ? { "x-language": tag } : {} });

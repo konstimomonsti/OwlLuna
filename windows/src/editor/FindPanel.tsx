@@ -7,6 +7,7 @@ import { loadWords, type PageWords } from "../storage/package";
 import type { NotebookDocument } from "./document";
 import { findInNotebook } from "./find";
 import { goToPage, type Session } from "./session";
+import { t } from "../i18n";
 
 export function FindPanel(props: { doc: NotebookDocument; session: Session; version: number; active: boolean }) {
   const { doc, session } = props;
@@ -75,7 +76,7 @@ export function FindPanel(props: { doc: NotebookDocument; session: Session; vers
       <SearchField
         value={query}
         onChange={(value) => { fresh.current = true; setQuery(value); setAt(0); }}
-        placeholder="Find in notebook"
+        placeholder={t("Find in notebook")}
         autoFocus
         onEnter={(shift) => {
           if (matches.length) show(index + (shift ? -1 : 1));
@@ -83,11 +84,11 @@ export function FindPanel(props: { doc: NotebookDocument; session: Session; vers
         testid="find-field"
       />
       <span className="meta find-count" data-testid="find-count">
-        {query.trim() === "" ? "" : matches.length ? `${index + 1} of ${matches.length}` : "No matches"}
+        {query.trim() === "" ? "" : matches.length ? t("{index} of {total}", { index: index + 1, total: matches.length }) : t("No matches")}
       </span>
-      <IconButton label="Previous (Shift+Enter)" onClick={() => show(index - 1)} disabled={!matches.length} testid="find-prev"><ChevronUp /></IconButton>
-      <IconButton label="Next (Enter)" onClick={() => show(index + 1)} disabled={!matches.length} testid="find-next"><ChevronDown /></IconButton>
-      <IconButton label="Close" onClick={close} testid="find-close"><X /></IconButton>
+      <IconButton label={t("Previous (Shift+Enter)")} onClick={() => show(index - 1)} disabled={!matches.length} testid="find-prev"><ChevronUp /></IconButton>
+      <IconButton label={t("Next (Enter)")} onClick={() => show(index + 1)} disabled={!matches.length} testid="find-next"><ChevronDown /></IconButton>
+      <IconButton label={t("Close")} onClick={close} testid="find-close"><X /></IconButton>
     </div>
   );
 }

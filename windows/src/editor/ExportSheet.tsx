@@ -12,11 +12,12 @@ import { recordTimelapse, recordingType } from "../services/timelapse";
 import { loadWords } from "../storage/package";
 import type { NotebookDocument } from "./document";
 import type { Session } from "./session";
+import { t, tp } from "../i18n";
 
 export type ExportFormat = "pdf" | "png" | "text" | "markdown" | "video";
 
-const formatNames: { value: ExportFormat; label: string }[] = [
-  { value: "pdf", label: "PDF" }, { value: "png", label: "Images" }, { value: "text", label: "Text" }, { value: "markdown", label: "Markdown" }, { value: "video", label: "Time-lapse" },
+const formatNames = (): { value: ExportFormat; label: string }[] => [
+  { value: "pdf", label: "PDF" }, { value: "png", label: t("Images") }, { value: "text", label: t("Text") }, { value: "markdown", label: "Markdown" }, { value: "video", label: t("Time-lapse") },
 ];
 
 /** The pages from `start` to `end` (1-based, either order), as IDs. */
@@ -38,7 +39,7 @@ function Proof(props: { doc: NotebookDocument; id: string; number: number; insid
       className={`proof${props.inside ? " on" : ""}`}
       aria-pressed={props.inside}
       onClick={(event) => props.onPick(event.shiftKey)}
-      title="Click to start here; Shift-click to end here"
+      title={t("Click to start here; Shift-click to end here")}
       data-testid="proof-page"
     >
       {url ? <img src={url} alt="" draggable={false} /> : <div className="proof-blank" />}
@@ -92,7 +93,7 @@ export function ExportSheet(props: { doc: NotebookDocument; session: Session; on
         saved = await saveFile(made.name, made.data, made.mime === "application/zip" ? { name: "Zip", extensions: ["zip"] } : { name: "PNG", extensions: ["png"] });
       } else if (format === "video") {
         const page = doc.page(chosen[0]);
-        if (!page) throw new Error("That page is gone.");
+        if (!page) throw new Error(t("That page is gone."));
         const bytes = await recordTimelapse(source, page, await doc.ensureInk(page.id), (fraction) => setProgress(fraction));
         saved = await saveFile(`${title} page ${start}.webm`, bytes, { name: "WebM video", extensions: ["webm"] });
       } else {
@@ -100,11 +101,11 @@ export function ExportSheet(props: { doc: NotebookDocument; session: Session; on
         saved = await saveFile(`${title}.${format === "markdown" ? "md" : "txt"}`, new TextEncoder().encode(text), format === "markdown" ? { name: "Markdown", extensions: ["md"] } : { name: "Text", extensions: ["txt"] });
       }
       if (saved) {
-        notify("Exported.");
+        notify(t("Exported."));
         props.onClose();
       }
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "That couldn't be exported.");
+      setError(failure instanceof Error ? failure.message : t("That couldn't be exported."));
     } finally {
       setProgress(null);
     }
@@ -112,23 +113,23 @@ export function ExportSheet(props: { doc: NotebookDocument; session: Session; on
 
   return (
     <Sheet
-      title="Export"
+      title={t("Export")}
       onClose={busy ? () => {} : props.onClose}
       wide
       testid="export-sheet"
       foot={
         <>
-          <button type="button" className="btn" onClick={props.onClose} disabled={busy} data-testid="export-cancel">Cancel</button>
+          <button type="button" className="btn" onClick={props.onClose} disabled={busy} data-testid="export-cancel">{t("Cancel")}</button>
           <button type="button" className="btn primary" onClick={() => void run()} disabled={busy || chosen.length === 0 || (video && !canRecord)} data-testid="export-go">
-            {video ? "Export Time-lapse" : `Export ${chosen.length} ${chosen.length === 1 ? "Page" : "Pages"}`}
+            {video ? t("Export Time-lapse") : tp(chosen.length, "Export {count} Page", "Export {count} Pages")}
           </button>
         </>
       }
     >
-      <Segmented<ExportFormat> label="Format" value={format} onChange={setFormat} options={formatNames} />
+      <Segmented<ExportFormat> label={t("Format")} value={format} onChange={setFormat} options={formatNames()} />
 
       <div>
-        <span className="label">{video ? "Page" : "Pages"}</span>
+        <span className="label">{video ? t("Page") : t("Pages")}</span>
         <div className="proof-strip" data-testid="proof-strip">
           {doc.manifest.pages.map((page, index) => (
             <Proof
@@ -142,35 +143,35 @@ export function ExportSheet(props: { doc: NotebookDocument; session: Session; on
           ))}
         </div>
         <div className="range-row">
-          <label className="meta" htmlFor="export-from">{video ? "Page" : "From"}</label>
+          <label className="meta" htmlFor="export-from">{video ? t("Page") : t("From")}</label>
           <input id="export-from" className="field range-field" type="number" min={1} max={ids.length} value={start} onChange={(event) => setStart(Math.min(Math.max(Number(event.target.value) || 1, 1), ids.length))} data-testid="export-from" />
           {!video && (
             <>
-              <label className="meta" htmlFor="export-to">to</label>
+              <label className="meta" htmlFor="export-to">{t("to")}</label>
               <input id="export-to" className="field range-field" type="number" min={1} max={ids.length} value={end} onChange={(event) => setEnd(Math.min(Math.max(Number(event.target.value) || 1, 1), ids.length))} data-testid="export-to" />
             </>
           )}
-          <button type="button" className="btn small" onClick={() => { setStart(current); setEnd(current); }} data-testid="export-this-page">This Page</button>
-          <button type="button" className="btn small flat" onClick={() => { setStart(1); setEnd(ids.length); }} data-testid="export-all-pages">All</button>
+          <button type="button" className="btn small" onClick={() => { setStart(current); setEnd(current); }} data-testid="export-this-page">{t("This Page")}</button>
+          <button type="button" className="btn small flat" onClick={() => { setStart(1); setEnd(ids.length); }} data-testid="export-all-pages">{t("All")}</button>
         </div>
       </div>
 
       {format === "pdf" && (
         <div className="ledger" data-testid="export-pdf-options">
-          <div className="ledger-row"><span className="grow">Include paper templates</span><Slab checked={templates} onChange={setTemplates} label="Include paper templates" /></div>
-          <div className="ledger-row"><span className="grow">Searchable handwriting{!handwriting && <span className="meta"> (none recognised yet)</span>}</span><Slab checked={searchable && handwriting} onChange={setSearchable} label="Searchable handwriting" disabled={!handwriting} /></div>
-          <div className="ledger-row"><span className="grow">Flatten tape</span><Slab checked={flatten} onChange={setFlatten} label="Flatten tape" /></div>
+          <div className="ledger-row"><span className="grow">{t("Include paper templates")}</span><Slab checked={templates} onChange={setTemplates} label={t("Include paper templates")} /></div>
+          <div className="ledger-row"><span className="grow">{t("Searchable handwriting")}{!handwriting && <span className="meta"> {t("(none recognised yet)")}</span>}</span><Slab checked={searchable && handwriting} onChange={setSearchable} label={t("Searchable handwriting")} disabled={!handwriting} /></div>
+          <div className="ledger-row"><span className="grow">{t("Flatten tape")}</span><Slab checked={flatten} onChange={setFlatten} label={t("Flatten tape")} /></div>
         </div>
       )}
       {format === "png" && (
         <div>
-          <span className="label">Scale</span>
-          <Segmented<"1" | "2" | "3"> label="Scale" value={scale} onChange={setScale} options={[{ value: "1", label: "1x" }, { value: "2", label: "2x" }, { value: "3", label: "3x" }]} />
-          {chosen.length > 1 && <p className="meta" style={{ marginTop: 8 }}>The pictures are saved together in a zip.</p>}
+          <span className="label">{t("Scale")}</span>
+          <Segmented<"1" | "2" | "3"> label={t("Scale")} value={scale} onChange={setScale} options={[{ value: "1", label: "1x" }, { value: "2", label: "2x" }, { value: "3", label: "3x" }]} />
+          {chosen.length > 1 && <p className="meta" style={{ marginTop: 8 }}>{t("The pictures are saved together in a zip.")}</p>}
         </div>
       )}
-      {video && !canRecord && <p className="field-error" role="alert">This system can&apos;t record video.</p>}
-      {busy && <Thread value={progress ?? 0} label="Export progress" />}
+      {video && !canRecord && <p className="field-error" role="alert">{t("This system can't record video.")}</p>}
+      {busy && <Thread value={progress ?? 0} label={t("Export progress")} />}
       {error && <p className="field-error" role="alert" data-testid="export-error">{error}</p>}
     </Sheet>
   );

@@ -7,6 +7,7 @@ import { nextRecordingName, pickRecordingType, recordingExtension } from "../edi
 import { uuid } from "../model/ids";
 import type { Recording } from "../model/notebook";
 import { packageDir } from "../storage/package";
+import { t } from "../i18n";
 
 export interface RecorderState {
   /** The notebook being recorded, or null when nothing is. */
@@ -35,10 +36,10 @@ export function recordingPath(notebook: string, file: string): string {
 /** What went wrong with the microphone, said so the user knows what to do. */
 export function microphoneProblem(error: unknown): string {
   const name = error instanceof DOMException || error instanceof Error ? error.name : "";
-  if (name === "NotAllowedError" || name === "SecurityError") return "OwlLuna can't use the microphone. Allow it in Windows Settings, under Privacy and security, Microphone.";
-  if (name === "NotFoundError" || name === "OverconstrainedError" || name === "DevicesNotFoundError") return "No microphone was found. Plug one in and try again.";
-  if (name === "NotReadableError") return "The microphone is in use by another app.";
-  return `The recording couldn't start: ${error instanceof Error ? error.message : String(error)}`;
+  if (name === "NotAllowedError" || name === "SecurityError") return t("OwlLuna can't use the microphone. Allow it in Windows Settings, under Privacy and security, Microphone.");
+  if (name === "NotFoundError" || name === "OverconstrainedError" || name === "DevicesNotFoundError") return t("No microphone was found. Plug one in and try again.");
+  if (name === "NotReadableError") return t("The microphone is in use by another app.");
+  return t("The recording couldn't start: {error}", { error: error instanceof Error ? error.message : String(error) });
 }
 
 export function isRecording(notebook?: string): boolean {
@@ -47,8 +48,8 @@ export function isRecording(notebook?: string): boolean {
 
 /** Starts recording for a notebook. Rejects with a message fit to show when it can't. */
 export async function startRecording(doc: NotebookDocument): Promise<void> {
-  if (live || starting) throw new Error("A recording is already running.");
-  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") throw new Error("This device can't record audio.");
+  if (live || starting) throw new Error(t("A recording is already running."));
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") throw new Error(t("This device can't record audio."));
   starting = true;
   try {
     let stream: MediaStream;
@@ -63,7 +64,7 @@ export async function startRecording(doc: NotebookDocument): Promise<void> {
     const startedAt = Date.now();
     const finished = new Promise<Recording>((resolve, reject) => {
       media.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
-      media.onerror = () => reject(new Error("The recording stopped unexpectedly."));
+      media.onerror = () => reject(new Error(t("The recording stopped unexpectedly.")));
       media.onstop = () => {
         void (async () => {
           try {

@@ -17,6 +17,7 @@ import {
 import { isDarkPaper, paperRGB } from "../model/paper";
 import type { FS } from "../platform/fs";
 import { assetPath } from "../storage/package";
+import { t } from "../i18n";
 
 export interface PdfHooks {
   /** Turns a picture the PDF can't hold (WebP, GIF) into PNG bytes. */
@@ -381,7 +382,7 @@ function linkLabel(item: LinkItem, manifest: Pick<Manifest, "pages">): string {
   if (item.target.to === "notebook") return item.target.name;
   const target = item.target;
   const index = manifest.pages.findIndex((page) => page.id === target.page);
-  return index === -1 ? "Missing page" : `Page ${index + 1}`;
+  return index === -1 ? t("Missing page") : t("Page {number}", { number: index + 1 });
 }
 
 /** The PDF's bytes for the chosen pages of a notebook. */

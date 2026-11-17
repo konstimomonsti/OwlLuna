@@ -1,5 +1,7 @@
 // Day keys: "2026-10-03" in the user's own calendar, as activity.json and flashcards keep them.
 
+import { locale as activeLocale } from "../i18n";
+
 export function dayKey(date: Date = new Date()): string {
   const y = date.getFullYear(), m = date.getMonth() + 1, d = date.getDate();
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -35,10 +37,10 @@ export function weekOf(date: Date = new Date(), firstDay = 1): string[] {
   return Array.from({ length: 7 }, (_, index) => dayKey(addDays(start, index)));
 }
 
-export function longDate(date: Date, locale?: string): string {
+export function longDate(date: Date, locale: string = activeLocale()): string {
   return date.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
-export function shortDate(date: Date, locale?: string): string {
+export function shortDate(date: Date, locale: string = activeLocale()): string {
   return date.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 }

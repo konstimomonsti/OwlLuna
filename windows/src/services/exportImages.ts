@@ -6,6 +6,7 @@ import type { Stroke } from "../model/ink";
 import type { Manifest } from "../model/notebook";
 import type { FS } from "../platform/fs";
 import { safeFileName } from "../platform/host";
+import { t } from "../i18n";
 
 export interface ImageSource {
   fs: FS;
@@ -27,10 +28,10 @@ export function imageName(title: string, number: number, total: number): string 
 
 export async function pagePNG(source: ImageSource, pageID: string, scale: number): Promise<Uint8Array> {
   const page = source.manifest.pages.find((candidate) => candidate.id === pageID);
-  if (!page) throw new Error("That page is gone.");
+  if (!page) throw new Error(t("That page is gone."));
   const canvas = await renderPageToCanvas(source.fs, source.id, page, await source.ensureInk(pageID), scale, { manifest: source.manifest });
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-  if (!blob) throw new Error("A page couldn't be drawn as a picture.");
+  if (!blob) throw new Error(t("A page couldn't be drawn as a picture."));
   return new Uint8Array(await blob.arrayBuffer());
 }
 

@@ -7,6 +7,7 @@ import type { FS } from "../platform/fs";
 import { pageRegion } from "../canvas/board";
 import { drawPaper, drawStrokes, pageIsDark } from "../canvas/renderPage";
 import { backdrops } from "../canvas/backdrops";
+import { t } from "../i18n";
 
 export const IDLE_CAP_MS = 400;
 export const MIN_TOTAL_MS = 4000;
@@ -91,8 +92,8 @@ export function recordingType(): string | null {
 /** Records a WebM of the page's ink being written. Takes as long as the video plays. */
 export async function recordTimelapse(source: TimelapseSource, page: Page, strokes: Stroke[], onProgress?: (fraction: number) => void): Promise<Uint8Array> {
   const type = recordingType();
-  if (!type) throw new Error("This system can't record video.");
-  if (strokes.length === 0) throw new Error("This page has no writing to play back.");
+  if (!type) throw new Error(t("This system can't record video."));
+  if (strokes.length === 0) throw new Error(t("This page has no writing to play back."));
   const region = pageRegion(page, strokes);
   const scale = Math.min(1280 / region.w, 720 / region.h, 2);
   const width = Math.max(2, Math.round(region.w * scale) & ~1), height = Math.max(2, Math.round(region.h * scale) & ~1);

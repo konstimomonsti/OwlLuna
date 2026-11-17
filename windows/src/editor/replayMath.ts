@@ -2,6 +2,7 @@
 
 import { strokeHit, type Point, type Stroke } from "../model/ink";
 import type { Recording } from "../model/notebook";
+import { t } from "../i18n";
 
 /** The moment of the notebook's writing that the audio is at, in milliseconds since 1970. */
 export function replayMoment(recording: Pick<Recording, "startedAt">, audioSeconds: number): number {
@@ -68,6 +69,6 @@ export function recordingExtension(mime: string): string {
 export function nextRecordingName(recordings: Pick<Recording, "name">[]): string {
   let n = recordings.length + 1;
   const names = new Set(recordings.map((recording) => recording.name));
-  while (names.has(`Recording ${n}`)) n++;
-  return `Recording ${n}`;
+  while (names.has(t("Recording {number}", { number: n }))) n++;
+  return t("Recording {number}", { number: n });
 }

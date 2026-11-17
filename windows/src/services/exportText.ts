@@ -3,6 +3,7 @@
 
 import { plainText } from "../canvas/textLayout";
 import type { LinkItem, Manifest, Page, PageItem } from "../model/notebook";
+import { t } from "../i18n";
 
 export interface TextExportOptions {
   markdown: boolean;
@@ -19,7 +20,7 @@ function linkLine(item: LinkItem, manifest: Pick<Manifest, "pages">, markdown: b
   }
   if (target.to === "page") {
     const index = manifest.pages.findIndex((page) => page.id === target.page);
-    const text = label || (index === -1 ? "Missing page" : `Page ${index + 1}`);
+    const text = label || (index === -1 ? t("Missing page") : t("Page {number}", { number: index + 1 }));
     if (index === -1) return text;
     return markdown ? `[${text}](#page-${index + 1})` : `${text} (page ${index + 1})`;
   }
@@ -42,12 +43,12 @@ export function pageBlocks(page: Page, manifest: Pick<Manifest, "pages">, option
     } else if (item.kind === "link") {
       blocks.push(linkLine(item, manifest, options.markdown));
     } else if (item.kind === "image" && item.text?.trim()) {
-      blocks.push(options.markdown ? `*Picture:* ${item.text.trim()}` : `Picture: ${item.text.trim()}`);
+      blocks.push(options.markdown ? `*${t("Picture:")}* ${item.text.trim()}` : `${t("Picture:")} ${item.text.trim()}`);
     }
   }
   for (const mark of page.marks ?? []) {
     if (!mark.text.trim()) continue;
-    blocks.push(options.markdown ? `> ${mark.text.trim()}` : `Highlighted: ${mark.text.trim()}`);
+    blocks.push(options.markdown ? `> ${mark.text.trim()}` : `${t("Highlighted:")} ${mark.text.trim()}`);
   }
   // A PDF page's cached words are the PDF's own text, which is not the notes; only handwriting is wanted here.
   const handwriting = page.background.kind === "pdf" ? "" : options.words?.[page.id]?.text?.trim() ?? "";
@@ -62,7 +63,7 @@ export function exportText(manifest: Pick<Manifest, "title" | "pages">, pageIDs:
     const index = manifest.pages.findIndex((page) => page.id === id);
     if (index === -1) continue;
     const blocks = pageBlocks(manifest.pages[index], manifest, options);
-    out.push([options.markdown ? `## Page ${index + 1}` : `Page ${index + 1}`, ...(blocks.length ? [""] : []), blocks.join("\n\n")].join("\n").trimEnd());
+    out.push([options.markdown ? `## ${t("Page {number}", { number: index + 1 })}` : t("Page {number}", { number: index + 1 }), ...(blocks.length ? [""] : []), blocks.join("\n\n")].join("\n").trimEnd());
   }
   return out.join("\n\n") + "\n";
 }

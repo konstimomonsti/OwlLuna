@@ -1,6 +1,7 @@
 // The app's state: the library's notebooks, folders and settings, the notebooks that are open, and which is shown.
 
 import { create } from "zustand";
+import { locale, t, tp } from "../i18n";
 import { NotebookDocument } from "../editor/document";
 import { dayKey } from "../model/days";
 import { defaultCover, newManifest, newPage, type CoverSpec, type Manifest, type PageDefaults } from "../model/notebook";
@@ -92,7 +93,7 @@ export function dismissNotice(id: string): void {
 }
 
 function trouble(error: unknown, doing: string): void {
-  notify(`${doing}: ${error instanceof Error ? error.message : String(error)}`, "trouble");
+  notify(t("{doing}: {error}", { doing, error: error instanceof Error ? error.message : String(error) }), "trouble");
 }
 
 /** Reads the library. Called once at launch, and again after a restore or a change of library folder. */
@@ -122,7 +123,7 @@ let settingsTimer: ReturnType<typeof setTimeout> | null = null;
 export function updateSettings(patch: Partial<Settings>): void {
   set((state) => ({ settings: { ...state.settings, ...patch } }));
   if (settingsTimer) clearTimeout(settingsTimer);
-  settingsTimer = setTimeout(() => void saveSettings(get().fs, get().settings).catch((error) => trouble(error, "Couldn't save settings")), 300);
+  settingsTimer = setTimeout(() => void saveSettings(get().fs, get().settings).catch((error) => trouble(error, t("Couldn't save settings"))), 300);
 }
 
 export async function flushSettings(): Promise<void> {
@@ -219,13 +220,13 @@ export async function openNotebook(id: string, pageID?: string): Promise<boolean
   if (!manifest || manifest.trashedAt !== null) return false;
   // Every way in, links and search results included, comes through here, so the lock can't be walked around.
   if (manifest.locked && !get().unlocked.includes(id)) {
-    if (!authenticator || !(await authenticator(`Open “${manifest.title}”`))) return false;
+    if (!authenticator || !(await authenticator(t("Open “{name}”", { name: manifest.title })))) return false;
     unlock(id);
   }
   try {
     await openDocument(id);
   } catch (error) {
-    trouble(error, "Couldn't open the notebook");
+    trouble(error, t("Couldn't open the notebook"));
     return false;
   }
   set((state) => ({
@@ -254,7 +255,7 @@ export async function closeTab(id: string): Promise<boolean> {
   try {
     await releaseDocument(id);
   } catch (error) {
-    trouble(error, "The notebook couldn't be saved, so it stays open");
+    trouble(error, t("The notebook couldn't be saved, so it stays open"));
     return false;
   }
   set((state) => {
@@ -309,7 +310,7 @@ export async function createNotebook(options: NewNotebookOptions): Promise<Manif
   const scope = get().scope;
   const manifest = newManifest({
     ...options,
-    title: options.title.trim() || "Untitled",
+    title: options.title.trim() || t("Untitled"),
     folder: options.folder !== undefined ? options.folder : scope.kind === "folder" ? scope.id : null,
     tags: options.tags ?? (scope.kind === "tag" ? [scope.tag] : []),
   });
@@ -321,7 +322,10 @@ export async function createNotebook(options: NewNotebookOptions): Promise<Manif
 /** "Quick Note 3 Oct, 14:05": a notebook to write in at once. */
 export async function quickNote(): Promise<Manifest> {
   const now = new Date();
-  const title = `Quick Note ${now.toLocaleDateString(undefined, { day: "numeric", month: "short" })}, ${now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+  const title = t("Quick Note {date}, {time}", {
+    date: now.toLocaleDateString(locale(), { day: "numeric", month: "short" }),
+    time: now.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }),
+  });
   const manifest = await createNotebook({ title, defaults: { template: "blank", paperColor: "white", pageSize: "letter" }, folder: null, tags: [] });
   await openNotebook(manifest.id);
   return manifest;
@@ -330,13 +334,13 @@ export async function quickNote(): Promise<Manifest> {
 /** The daily journal's notebook and today's page in it, both made if they aren't there. */
 export async function openToday(date: Date = new Date()): Promise<{ notebook: string; page: string } | null> {
   let journal = Object.values(get().manifests).find((manifest) => manifest.journal && manifest.trashedAt === null);
-  if (!journal) journal = await createNotebook({ title: "Journal", journal: true, folder: null, tags: [], cover: { ...defaultCover("journal"), cloth: "navy" } });
+  if (!journal) journal = await createNotebook({ title: t("Journal"), journal: true, folder: null, tags: [], cover: { ...defaultCover("journal"), cloth: "navy" } });
   const key = dayKey(date);
   let doc: NotebookDocument;
   try {
     doc = await openDocument(journal.id);
   } catch (error) {
-    trouble(error, "Couldn't open the journal");
+    trouble(error, t("Couldn't open the journal"));
     return null;
   }
   let page = doc.manifest.pages.find((candidate) => candidate.date === key);
@@ -370,8 +374,8 @@ export async function trashNotebooks(ids: string[]): Promise<void> {
     if (get().tabs.includes(id) && !(await closeTab(id))) continue;
     await changeNotebook(id, (manifest) => { manifest.trashedAt = now; manifest.favourite = false; });
   }
-  notify(ids.length === 1 ? "Moved to Recently Deleted" : `${ids.length} notebooks moved to Recently Deleted`, "info", {
-    label: "Undo", run: () => void restoreNotebooks(ids),
+  notify(tp(ids.length, "Moved to Recently Deleted", "{count} notebooks moved to Recently Deleted"), "info", {
+    label: t("Undo"), run: () => void restoreNotebooks(ids),
   });
 }
 
@@ -414,8 +418,8 @@ export async function duplicateNotebook(id: string): Promise<Manifest | null> {
   if (!source) return null;
   await documents.get(id)?.save();
   const titles = new Set(Object.values(get().manifests).map((manifest) => manifest.title));
-  let title = `${source.title} copy`;
-  for (let n = 2; titles.has(title); n++) title = `${source.title} copy ${n}`;
+  let title = t("{title} copy", { title: source.title });
+  for (let n = 2; titles.has(title); n++) title = t("{title} copy {number}", { title: source.title, number: n });
   const copy = await duplicatePackage(get().fs, id, title);
   adopt(copy);
   return copy;

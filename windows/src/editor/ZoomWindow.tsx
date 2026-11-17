@@ -14,6 +14,7 @@ import { useApp } from "../state/app";
 import type { NotebookDocument } from "./document";
 import type { Session } from "./session";
 import { advanceStrip, clampStrip, lineStepOf, magnification, ZOOM_WINDOW_HEIGHT, type Strip } from "./zoomStrip";
+import { t } from "../i18n";
 
 export function ZoomWindow(props: { doc: NotebookDocument; session: Session; version: number }) {
   const { doc, session } = props;
@@ -108,11 +109,11 @@ export function ZoomWindow(props: { doc: NotebookDocument; session: Session; ver
   return (
     <div className="zoom-window" data-testid="zoom-window">
       <div className="zoom-tools">
-        <IconButton label="Move Left" onClick={() => move((strip) => ({ ...strip, x: strip.x - strip.w * 0.5 }))} testid="zoom-left"><ChevronLeft /></IconButton>
-        <IconButton label="Move Right" onClick={() => move((strip) => ({ ...strip, x: strip.x + strip.w * 0.5 }))} testid="zoom-right"><ChevronRight /></IconButton>
-        <IconButton label="Next Line" onClick={() => move((strip) => ({ ...strip, x: 0, y: strip.y + line }))} testid="zoom-next-line"><CornerDownLeft /></IconButton>
+        <IconButton label={t("Move Left")} onClick={() => move((strip) => ({ ...strip, x: strip.x - strip.w * 0.5 }))} testid="zoom-left"><ChevronLeft /></IconButton>
+        <IconButton label={t("Move Right")} onClick={() => move((strip) => ({ ...strip, x: strip.x + strip.w * 0.5 }))} testid="zoom-right"><ChevronRight /></IconButton>
+        <IconButton label={t("Next Line")} onClick={() => move((strip) => ({ ...strip, x: 0, y: strip.y + line }))} testid="zoom-next-line"><CornerDownLeft /></IconButton>
         <div className="grow" />
-        <IconButton label="Close Zoom Window" onClick={() => session.setState({ zoomWindow: null })} testid="zoom-close"><X /></IconButton>
+        <IconButton label={t("Close Zoom Window")} onClick={() => session.setState({ zoomWindow: null })} testid="zoom-close"><X /></IconButton>
       </div>
       <div
         ref={view}

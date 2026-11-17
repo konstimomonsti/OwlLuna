@@ -9,6 +9,7 @@ import { pageSizePoints } from "../model/paper";
 import type { FS } from "../platform/fs";
 import { addAsset, deletePackage, saveManifest } from "../storage/package";
 import { refreshWords } from "./words";
+import { t } from "../i18n";
 
 export type Progress = (done: number, total: number, what: string) => void;
 
@@ -20,7 +21,7 @@ export interface PickedFileLike {
 /** The name of a file without its folder or extension, for a title. */
 export function titleOfFile(name: string): string {
   const base = name.split(/[\\/]/).pop() ?? name;
-  return base.replace(/\.[^.]+$/, "").trim() || "Untitled";
+  return base.replace(/\.[^.]+$/, "").trim() || t("Untitled");
 }
 
 export function extensionOfName(name: string): string {
@@ -39,9 +40,9 @@ export function isPictureName(name: string): boolean {
 /** pdf.js says a file needs a password with a PasswordException; anything else is a file it can't read. */
 export function explainPdfError(error: unknown): Error {
   const name = (error as { name?: string } | null)?.name;
-  if (name === "PasswordException") return new Error("This PDF is password-protected. Remove the password and try again.");
-  if (name === "InvalidPDFException") return new Error("That file isn't a PDF, or it is damaged.");
-  return new Error(error instanceof Error && error.message ? `That PDF couldn't be read: ${error.message}` : "That PDF couldn't be read.");
+  if (name === "PasswordException") return new Error(t("This PDF is password-protected. Remove the password and try again."));
+  if (name === "InvalidPDFException") return new Error(t("That file isn't a PDF, or it is damaged."));
+  return new Error(error instanceof Error && error.message ? t("That PDF couldn't be read: {error}", { error: error.message }) : t("That PDF couldn't be read."));
 }
 
 /** Lets go of a PDF's memory, where this pdf.js has a way to. */
@@ -61,7 +62,7 @@ async function readPdf(data: Uint8Array): Promise<{ pdf: PDFDocumentProxy; sizes
     throw explainPdfError(error);
   }
   try {
-    if (pdf.numPages < 1) throw new Error("That PDF has no pages.");
+    if (pdf.numPages < 1) throw new Error(t("That PDF has no pages."));
     const sizes: { w: number; h: number }[] = [];
     for (let index = 1; index <= pdf.numPages; index++) {
       const page = await pdf.getPage(index);
@@ -102,7 +103,7 @@ async function measurePicture(data: Uint8Array): Promise<{ w: number; h: number 
 
 /** Makes a notebook from a PDF. Rejects with a message fit to show when the file can't be used. */
 export async function importPdf(fs: FS, data: Uint8Array, title: string, onProgress?: Progress): Promise<Manifest> {
-  onProgress?.(0, 1, "Reading the PDF");
+  onProgress?.(0, 1, t("Reading the PDF"));
   const { pdf, sizes } = await readPdf(data);
   await release(pdf);
   const manifest = newManifest({ title: titleOfFile(title), cover: { style: "firstPage" }, pages: [] });
@@ -115,14 +116,14 @@ export async function importPdf(fs: FS, data: Uint8Array, title: string, onProgr
     await saveManifest(fs, manifest);
     // Words are a convenience: a PDF without readable text is still a notebook.
     try {
-      await refreshWords({ fs, id: manifest.id, manifest }, undefined, (done, total) => onProgress?.(done, total, "Reading the text"));
+      await refreshWords({ fs, id: manifest.id, manifest }, undefined, (done, total) => onProgress?.(done, total, t("Reading the text")));
     } catch {
       // Search finds it later, when the words are made again.
     }
     return manifest;
   } catch (error) {
     if (stored) await deletePackage(fs, manifest.id).catch(() => {});
-    throw error instanceof Error ? error : new Error("That PDF couldn't be imported.");
+    throw error instanceof Error ? error : new Error(t("That PDF couldn't be imported."));
   }
 }
 
@@ -132,32 +133,32 @@ export async function importPictures(fs: FS, files: PickedFileLike[], title: str
   const pages: Page[] = [];
   try {
     for (const [index, file] of files.entries()) {
-      onProgress?.(index, files.length, "Adding pictures");
+      onProgress?.(index, files.length, t("Adding pictures"));
       const size = await measurePicture(file.data);
       if (!size) continue;
       const stored = await addAsset(fs, manifest.id, file.data, extensionOfName(file.name) === "jpeg" ? "jpg" : extensionOfName(file.name) || "png");
       pages.push(newPage(plainDefaults, { background: { kind: "image", file: stored }, size: picturePageSize(size) }));
     }
-    if (pages.length === 0) throw new Error("None of those pictures could be read.");
+    if (pages.length === 0) throw new Error(t("None of those pictures could be read."));
     manifest.pages = pages;
     await saveManifest(fs, manifest);
-    onProgress?.(files.length, files.length, "Adding pictures");
+    onProgress?.(files.length, files.length, t("Adding pictures"));
     return manifest;
   } catch (error) {
     await deletePackage(fs, manifest.id).catch(() => {});
-    throw error instanceof Error ? error : new Error("Those pictures couldn't be imported.");
+    throw error instanceof Error ? error : new Error(t("Those pictures couldn't be imported."));
   }
 }
 
 /** Adds a PDF's pages to an open notebook after a page, as one undoable step. Returns the new pages. */
 export async function appendPdf(doc: NotebookDocument, data: Uint8Array, afterPageID: string | null, onProgress?: Progress): Promise<Page[]> {
-  onProgress?.(0, 1, "Reading the PDF");
+  onProgress?.(0, 1, t("Reading the PDF"));
   const { pdf, sizes } = await readPdf(data);
   await release(pdf);
   const file = await addAsset(doc.fs, doc.id, data, "pdf");
   const pages = pdfPages(file, sizes);
   const at = afterPageID ? doc.pageIndex(afterPageID) + 1 : doc.manifest.pages.length;
-  doc.insertPages(at, pages, new Map(), pages.length === 1 ? "Add PDF Page" : "Add PDF Pages");
+  doc.insertPages(at, pages, new Map(), pages.length === 1 ? t("Add PDF Page") : t("Add PDF Pages"));
   void refreshWords(doc).catch(() => {});
   return pages;
 }
@@ -172,8 +173,8 @@ export async function appendPictures(doc: NotebookDocument, files: PickedFileLik
     const stored = await addAsset(doc.fs, doc.id, file.data, extension === "jpeg" ? "jpg" : extension || "png");
     pages.push(newPage(doc.manifest.defaults, { background: { kind: "image", file: stored }, size: picturePageSize(size) }));
   }
-  if (pages.length === 0) throw new Error("That picture couldn't be read.");
+  if (pages.length === 0) throw new Error(t("That picture couldn't be read."));
   const at = afterPageID ? doc.pageIndex(afterPageID) + 1 : doc.manifest.pages.length;
-  doc.insertPages(at, pages, new Map(), pages.length === 1 ? "Add Picture Page" : "Add Picture Pages");
+  doc.insertPages(at, pages, new Map(), pages.length === 1 ? t("Add Picture Page") : t("Add Picture Pages"));
   return pages;
 }

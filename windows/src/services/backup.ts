@@ -8,6 +8,7 @@ import { decodeManifest, encodeManifest, type Manifest } from "../model/notebook
 import { bytesOf, listAll, MemoryFS, readText, type FS } from "../platform/fs";
 import { loadActivity, loadFolders, loadShelves, mendFolders, saveActivity, saveFolders, saveShelves, type Activity } from "../storage/libraryFiles";
 import { isPackageName, PACKAGE_SUFFIX, packageDir } from "../storage/package";
+import { t } from "../i18n";
 
 export const BACKUP_SUFFIX = ".owlbackup";
 
@@ -97,17 +98,17 @@ export async function restoreBackup(fs: FS, data: Uint8Array): Promise<RestoreRe
   try {
     entries = unzipSync(data);
   } catch {
-    throw new NotABackup("This isn't an OwlLuna backup.");
+    throw new NotABackup(t("This isn't an OwlLuna backup."));
   }
   // A single path that leaves the library makes the whole file untrustworthy.
   for (const name of Object.keys(entries)) {
-    if (!isSafeEntryPath(name)) throw new NotABackup("This backup holds files outside the library, so it wasn't opened.");
+    if (!isSafeEntryPath(name)) throw new NotABackup(t("This backup holds files outside the library, so it wasn't opened."));
   }
   try {
     const info = JSON.parse(new TextDecoder().decode(entries["backup.json"]));
     if (!info || info.version !== 1 || !Array.isArray(info.notebooks)) throw new Error("wrong shape");
   } catch {
-    throw new NotABackup("This isn't an OwlLuna backup.");
+    throw new NotABackup(t("This isn't an OwlLuna backup."));
   }
 
   // Group the notebook files by package folder.
@@ -116,7 +117,7 @@ export async function restoreBackup(fs: FS, data: Uint8Array): Promise<RestoreRe
     if (name.endsWith("/")) continue;
     const parts = name.split(/[\\/]/).filter(Boolean);
     if (parts[0] !== "notebooks" || parts.length < 3) continue;
-    if (!isPackageName(parts[1]) || bannedInName.test(parts[1])) throw new NotABackup("This backup names a notebook in a way that isn't allowed.");
+    if (!isPackageName(parts[1]) || bannedInName.test(parts[1])) throw new NotABackup(t("This backup names a notebook in a way that isn't allowed."));
     const id = parts[1].slice(0, -PACKAGE_SUFFIX.length);
     const files = packages.get(id) ?? new Map<string, Uint8Array>();
     files.set(parts.slice(2).join("/"), bytes);

@@ -1,0 +1,23 @@
+/* Import from OneNote. Square-cut controls, the app's tokens, Fraunces for headings. */
+.onenote-body { display: flex; flex-direction: column; gap: var(--x3); min-width: 0; }
+.onenote-body h3, .onenote-body h4 { font-family: "Fraunces", Georgia, serif; margin: 0; font-weight: 600; }
+.onenote-body p { margin: 0; }
+.onenote-bar { display: flex; align-items: center; gap: var(--x2); }
+.onenote-tree { max-height: 42vh; overflow: auto; border: 1px solid var(--hairline); border-radius: var(--r-plate); background: var(--surface); padding: var(--x1) var(--x2); }
+.onenote-row { display: flex; align-items: center; gap: var(--x2); min-height: 32px; min-width: 0; }
+.onenote-row.section.locked { opacity: 0.55; }
+.onenote-check { display: flex; align-items: center; gap: var(--x2); min-width: 0; cursor: pointer; }
+.onenote-check input { width: 16px; height: 16px; accent-color: var(--ink); border-radius: 0; flex: none; }
+.onenote-name.book { font-weight: 600; font-family: "Fraunces", Georgia, serif; }
+.onenote-dot { width: 10px; height: 10px; border-radius: 1px; border: 1px solid rgba(27, 34, 48, 0.35); flex: none; }
+.onenote-twist { width: 24px; height: 24px; padding: 0; border: 0; background: transparent; color: var(--text-secondary); display: grid; place-items: center; flex: none; }
+.onenote-twist svg { width: 16px; height: 16px; }
+.onenote-lock { display: inline-flex; align-items: center; gap: 4px; }
+.onenote-lock svg { width: 12px; height: 12px; }
+.onenote-local { display: flex; flex-direction: column; gap: var(--x2); border-top: 1px solid var(--hairline); padding-top: var(--x3); }
+.onenote-options { display: flex; flex-direction: column; gap: var(--x2); border-top: 1px solid var(--hairline); padding-top: var(--x3); }
+.onenote-problem { color: var(--tomato, #C9452F); }
+.onenote-now { font-weight: 600; overflow-wrap: anywhere; }
+.onenote-summary ul { margin: var(--x2) 0; padding-left: 1.2em; }
+.onenote-summary li { margin: 2px 0; overflow-wrap: anywhere; }
+.onenote-warnings { max-height: 30vh; overflow: auto; font-size: 12px; background: var(--well); padding: var(--x2) var(--x3) var(--x2) 1.6em; border-radius: var(--r-plate); }

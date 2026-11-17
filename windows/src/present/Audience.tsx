@@ -9,6 +9,8 @@ import { libraryFS, isTauri } from "../platform/host";
 import { loadInk, loadManifest } from "../storage/package";
 import { openLink } from "./channel";
 import { fitBox, fromFraction, type PresentMessage } from "./logic";
+import { setLanguage, t, useLanguage } from "../i18n";
+import { loadSettings } from "../storage/libraryFiles";
 
 const TRAIL_MS = 1200;
 
@@ -28,6 +30,7 @@ async function closeWindow(): Promise<void> {
 }
 
 export default function Audience() {
+  useLanguage();
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const [rendered, setRendered] = useState<HTMLCanvasElement | null>(null);
   const [message, setMessage] = useState<PageMessage | null>(null);
@@ -40,6 +43,8 @@ export default function Audience() {
 
   useEffect(() => {
     document.title = "OwlLuna";
+    // This window has no library state of its own, so it reads the language setting from the files.
+    void loadSettings(libraryFS()).then((settings) => setLanguage(settings.language), () => {});
     const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
@@ -73,7 +78,7 @@ export default function Audience() {
         const fs = libraryFS();
         const manifest = await loadManifest(fs, message.notebook);
         const page = manifest.pages.find((candidate) => candidate.id === message.pageID);
-        if (!page) throw new Error("That page is not in the notebook.");
+        if (!page) throw new Error(t("That page is not in the notebook."));
         const strokes = await loadInk(fs, message.notebook, message.pageID);
         const region = pageRegion(page, strokes);
         const scale = Math.min(size.w / region.w, size.h / region.h) * (window.devicePixelRatio || 1);
@@ -147,11 +152,11 @@ export default function Audience() {
 
   return (
     <div className="audience" data-testid="audience" data-page={message?.pageID ?? ""}>
-      {!rendered && <div className="audience-wait display">{problem ?? "Waiting for the presenter…"}</div>}
+      {!rendered && <div className="audience-wait display">{problem ?? t("Waiting for the presenter…")}</div>}
       <canvas ref={show} className="audience-page" data-testid="audience-page" style={{ left: fitted.left, top: fitted.top, width: fitted.width, height: fitted.height, display: rendered ? "block" : "none" }} />
       <canvas ref={laser} className="audience-laser" width={size.w} height={size.h} />
       {!isTauri && (
-        <button type="button" className="audience-fullscreen btn small" onClick={fullscreen} data-testid="audience-fullscreen" aria-label="Full screen" title="Full screen"><Maximize /></button>
+        <button type="button" className="audience-fullscreen btn small" onClick={fullscreen} data-testid="audience-fullscreen" aria-label={t("Full screen")} title={t("Full screen")}><Maximize /></button>
       )}
     </div>
   );

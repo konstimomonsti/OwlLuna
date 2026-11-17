@@ -2,12 +2,16 @@
 
 import { Check, Lock } from "lucide-react";
 import { useMemo } from "react";
+import { locale, t } from "../i18n";
 import { dayKey, shortDate, weekOf, dateOfKey } from "../model/days";
 import { openCalendar, openNotebook, useApp } from "../state/app";
 import { Cover } from "./Cover";
 import { onThisDay } from "./journal";
 
-const weekdayLetters = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** Short weekday names in the active language, Monday first. */
+function weekdayLetters(): string[] {
+  return Array.from({ length: 7 }, (_, index) => new Date(2024, 0, 1 + index).toLocaleDateString(locale(), { weekday: "short" }));
+}
 
 export function Glance() {
   const manifests = useApp((state) => state.manifests);
@@ -30,13 +34,13 @@ export function Glance() {
   return (
     <div className="glance" data-testid="glance">
       {resume ? (
-        <section className="plate continue-card" data-testid="continue-card" aria-label="Continue writing">
+        <section className="plate continue-card" data-testid="continue-card" aria-label={t("Continue writing")}>
           <Cover title={resume.title} cover={resume.cover} whiteboard={resume.kind === "whiteboard"} manifest={resume} />
           <div className="info">
-            <span className="meta">Continue writing</span>
+            <span className="meta">{t("Continue writing")}</span>
             <h2 className="truncate">{resume.title}</h2>
-            <span className="secondary" data-testid="continue-page">Page {pageIndex + 1} of {resume.pages.length}</span>
-            <button type="button" className="btn primary" style={{ marginTop: 6 }} onClick={() => void openNotebook(resume.id, resume.lastPage)} data-testid="continue-open">Open</button>
+            <span className="secondary" data-testid="continue-page">{t("Page {page} of {total}", { page: pageIndex + 1, total: resume.pages.length })}</span>
+            <button type="button" className="btn primary" style={{ marginTop: 6 }} onClick={() => void openNotebook(resume.id, resume.lastPage)} data-testid="continue-open">{t("Open")}</button>
           </div>
         </section>
       ) : (
@@ -44,8 +48,8 @@ export function Glance() {
       )}
       <div className="glance-stack">
         {memories.length > 0 && (
-          <section className="plate memory-card" data-testid="on-this-day" aria-label="On This Day">
-            <h2>On This Day</h2>
+          <section className="plate memory-card" data-testid="on-this-day" aria-label={t("On This Day")}>
+            <h2>{t("On This Day")}</h2>
             <div>
               {memories.map((memory) => {
                 const date = dateOfKey(memory.date);
@@ -60,15 +64,15 @@ export function Glance() {
           </section>
         )}
         {writingHistory && (
-          <button type="button" className="plate week-card" onClick={() => openCalendar(true)} data-testid="week-strip" aria-label="This week. Open the writing calendar.">
-            <span className="display" style={{ fontSize: 17, fontWeight: 600 }}>This Week</span>
+          <button type="button" className="plate week-card" onClick={() => openCalendar(true)} data-testid="week-strip" aria-label={t("This week. Open the writing calendar.")}>
+            <span className="display" style={{ fontSize: 17, fontWeight: 600 }}>{t("This Week")}</span>
             <span className="week-strip">
               {week.map((key, index) => {
                 const wrote = (activity.days[key]?.strokes ?? 0) > 0;
                 return (
                   <span key={key} className={`week-day${key === today ? " today" : ""}`} data-testid="week-day" data-wrote={wrote}>
-                    <span>{weekdayLetters[index]}</span>
-                    <i className={wrote ? "wrote" : undefined} aria-label={wrote ? "written" : "not written"}>{wrote && <Check />}</i>
+                    <span>{weekdayLetters()[index]}</span>
+                    <i className={wrote ? "wrote" : undefined} aria-label={wrote ? t("written") : t("not written")}>{wrote && <Check />}</i>
                   </span>
                 );
               })}
@@ -81,5 +85,5 @@ export function Glance() {
 }
 
 export function LockMark() {
-  return <Lock className="lock-mark" aria-label="Locked" />;
+  return <Lock className="lock-mark" aria-label={t("Locked")} />;
 }

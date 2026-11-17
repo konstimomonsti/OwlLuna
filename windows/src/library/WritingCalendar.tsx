@@ -3,10 +3,14 @@
 import { BookOpen, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { EmptyPlate, IconButton, Sheet } from "../design/controls";
+import { locale, t, tp } from "../i18n";
 import { addDays, dayKey, longDate } from "../model/days";
 import { openCalendar, openNotebook, openSettings, updateSettings, useApp } from "../state/app";
 
-const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** Short weekday names in the active language, Monday first. */
+function weekdays(): string[] {
+  return Array.from({ length: 7 }, (_, index) => new Date(2024, 0, 1 + index).toLocaleDateString(locale(), { weekday: "short" }));
+}
 
 /** The 6 weeks of a month as day keys, Monday first, with the days of the neighbouring months that fill the rows. */
 export function monthGrid(year: number, month: number): { key: string; inMonth: boolean; day: number }[] {
@@ -30,7 +34,7 @@ export function WritingCalendar() {
 
   const cells = useMemo(() => monthGrid(shown.year, shown.month), [shown]);
   const today = dayKey(now);
-  const monthName = new Date(shown.year, shown.month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const monthName = new Date(shown.year, shown.month, 1).toLocaleDateString(locale(), { month: "long", year: "numeric" });
 
   const totals = useMemo(() => {
     let days = 0, strokes = 0;
@@ -53,13 +57,13 @@ export function WritingCalendar() {
 
   if (!writingHistory) {
     return (
-      <Sheet title="Writing Calendar" onClose={close} testid="calendar-sheet" foot={<button type="button" className="btn" onClick={close} data-testid="calendar-close">Close</button>}>
-        <EmptyPlate icon={<CalendarDays />} title="Writing history is off">
-          The calendar is drawn from a small record kept on this PC of how much you wrote each day and in which notebooks. With it off, nothing is recorded and nothing is shown.
+      <Sheet title={t("Writing Calendar")} onClose={close} testid="calendar-sheet" foot={<button type="button" className="btn" onClick={close} data-testid="calendar-close">{t("Close")}</button>}>
+        <EmptyPlate icon={<CalendarDays />} title={t("Writing history is off")}>
+          {t("The calendar is drawn from a small record kept on this PC of how much you wrote each day and in which notebooks. With it off, nothing is recorded and nothing is shown.")}
         </EmptyPlate>
         <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-          <button type="button" className="btn primary" onClick={() => updateSettings({ writingHistory: true })} data-testid="calendar-turn-on">Turn On</button>
-          <button type="button" className="btn" onClick={() => { close(); openSettings(true); }} data-testid="calendar-settings">Open Settings</button>
+          <button type="button" className="btn primary" onClick={() => updateSettings({ writingHistory: true })} data-testid="calendar-turn-on">{t("Turn On")}</button>
+          <button type="button" className="btn" onClick={() => { close(); openSettings(true); }} data-testid="calendar-settings">{t("Open Settings")}</button>
         </div>
       </Sheet>
     );
@@ -69,13 +73,13 @@ export function WritingCalendar() {
   const pickedDate = picked ? new Date(+picked.slice(0, 4), +picked.slice(5, 7) - 1, +picked.slice(8, 10)) : null;
 
   return (
-    <Sheet title="Writing Calendar" onClose={close} testid="calendar-sheet" foot={<button type="button" className="btn" onClick={close} data-testid="calendar-close">Close</button>}>
+    <Sheet title={t("Writing Calendar")} onClose={close} testid="calendar-sheet" foot={<button type="button" className="btn" onClick={close} data-testid="calendar-close">{t("Close")}</button>}>
       <div className="calendar-head">
         <h3 data-testid="calendar-month">{monthName}</h3>
-        <IconButton label="Previous month" onClick={() => step(-1)} testid="calendar-prev"><ChevronLeft /></IconButton>
-        <IconButton label="Next month" onClick={() => step(1)} testid="calendar-next"><ChevronRight /></IconButton>
+        <IconButton label={t("Previous month")} onClick={() => step(-1)} testid="calendar-prev"><ChevronLeft /></IconButton>
+        <IconButton label={t("Next month")} onClick={() => step(1)} testid="calendar-next"><ChevronRight /></IconButton>
       </div>
-      <div className="calendar-weekdays meta">{weekdays.map((name) => <span key={name}>{name}</span>)}</div>
+      <div className="calendar-weekdays meta">{weekdays().map((name) => <span key={name}>{name}</span>)}</div>
       <div className="calendar-grid" data-testid="calendar-grid">
         {cells.map((cell) => {
           const wrote = (activity.days[cell.key]?.strokes ?? 0) > 0;
@@ -84,7 +88,7 @@ export function WritingCalendar() {
               key={cell.key}
               type="button"
               className={`calendar-day${cell.inMonth ? "" : " other"}${wrote ? " wrote" : ""}${cell.key === today ? " today" : ""}${cell.key === picked ? " picked" : ""}`}
-              aria-label={`${cell.key}${wrote ? ", written" : ""}`}
+              aria-label={wrote ? t("{date}, written", { date: cell.key }) : cell.key}
               aria-pressed={cell.key === picked}
               onClick={() => setPicked(cell.key === picked ? null : cell.key)}
               data-testid="calendar-day"
@@ -98,27 +102,31 @@ export function WritingCalendar() {
       </div>
       <p className="meta" data-testid="calendar-totals">
         {totals.days === 0
-          ? "Nothing written this month"
-          : `${totals.days} ${totals.days === 1 ? "day" : "days"} written · ${totals.strokes.toLocaleString()} ${totals.strokes === 1 ? "stroke" : "strokes"} · ${totals.books} ${totals.books === 1 ? "notebook" : "notebooks"}`}
+          ? t("Nothing written this month")
+          : [
+            tp(totals.days, "{count} day written", "{count} days written"),
+            tp(totals.strokes, "{count} stroke", "{count} strokes"),
+            tp(totals.books, "{count} notebook", "{count} notebooks"),
+          ].join(" · ")}
       </p>
       {picked && pickedDate && (
         <section data-testid="calendar-picked">
           <h3 className="display" style={{ fontSize: 16, marginBottom: 6 }}>{longDate(pickedDate)}</h3>
           {!day || day.notebooks.length === 0 ? (
-            <p className="secondary">Nothing was written this day.</p>
+            <p className="secondary">{t("Nothing was written this day.")}</p>
           ) : (
             <div className="plate day-list">
               {day.notebooks.map((id) => {
                 const manifest = manifests[id];
                 // A notebook that is gone is named as such, and a locked one stays unnamed.
-                const name = !manifest ? "A notebook that is no longer here" : manifest.locked ? "Locked notebook" : manifest.title;
+                const name = !manifest ? t("A notebook that is no longer here") : manifest.locked ? t("Locked notebook") : manifest.title;
                 return (
                   <div key={id} className="row-line" data-testid="calendar-notebook">
                     <span className="truncate grow">{name}</span>
                     {manifest && manifest.trashedAt === null && (
-                      <button type="button" className="btn small" onClick={() => { close(); void openNotebook(id); }} data-testid="calendar-open"><BookOpen /> Open</button>
+                      <button type="button" className="btn small" onClick={() => { close(); void openNotebook(id); }} data-testid="calendar-open"><BookOpen /> {t("Open")}</button>
                     )}
-                    {manifest && manifest.trashedAt !== null && <span className="meta">Recently Deleted</span>}
+                    {manifest && manifest.trashedAt !== null && <span className="meta">{t("Recently Deleted")}</span>}
                   </div>
                 );
               })}

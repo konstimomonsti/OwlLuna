@@ -8,6 +8,7 @@ import { EmptyPlate, IconButton } from "../design/controls";
 import type { Manifest, Page } from "../model/notebook";
 import type { NotebookDocument } from "./document";
 import { goToPage, type Session } from "./session";
+import { t } from "../i18n";
 
 export interface OutlineNode {
   title: string;
@@ -46,7 +47,7 @@ async function resolveOutline(doc: NotebookDocument, file: string, raw: RawOutli
       } catch {
         // A destination that can't be followed is shown but doesn't go anywhere.
       }
-      out.push({ title: entry.title || "Untitled", pageID, children: await walk(entry.items ?? []) });
+      out.push({ title: entry.title || t("Untitled"), pageID, children: await walk(entry.items ?? []) });
     }
     return out;
   };
@@ -104,20 +105,20 @@ export function Outline(props: { doc: NotebookDocument; session: Session; versio
   return (
     <aside className="side-panel right outline-panel" data-testid="outline-panel">
       <div className="side-head">
-        <h3 className="display grow" style={{ fontSize: 16 }}>Outline</h3>
-        <IconButton label="Close" onClick={() => session.setState({ panel: null })} testid="outline-close"><X /></IconButton>
+        <h3 className="display grow" style={{ fontSize: 16 }}>{t("Outline")}</h3>
+        <IconButton label={t("Close")} onClick={() => session.setState({ panel: null })} testid="outline-close"><X /></IconButton>
       </div>
       <div className="side-body">
         {tree.length > 0 && (
           <div className="outline-section">
-            <span className="label">Contents</span>
+            <span className="label">{t("Contents")}</span>
             {tree.map((entry) => <Tree key={entry.file} nodes={entry.nodes} depth={0} session={session} />)}
           </div>
         )}
         <div className="outline-section">
-          <span className="label">Bookmarks</span>
+          <span className="label">{t("Bookmarks")}</span>
           {bookmarks.length === 0 ? (
-            <EmptyPlate icon={<Bookmark />} title="No bookmarks">Press Ctrl+B on a page to mark it.</EmptyPlate>
+            <EmptyPlate icon={<Bookmark />} title={t("No bookmarks")}>{t("Press Ctrl+B on a page to mark it.")}</EmptyPlate>
           ) : bookmarks.map(({ page, index }) => (
             <button key={page.id} type="button" className="outline-row bookmark" onClick={() => goToPage(session, page.id)} data-testid="outline-bookmark">
               <Bookmark />

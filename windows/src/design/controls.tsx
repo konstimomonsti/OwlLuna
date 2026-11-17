@@ -4,6 +4,7 @@ import { Check, Search, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { create } from "zustand";
+import { t } from "../i18n";
 import { dismissNotice, useApp } from "../state/app";
 
 export function IconButton(props: {
@@ -174,7 +175,7 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
         <div className={`sheet${props.wide ? " wide" : ""}`} role="dialog" aria-modal="true" aria-label={props.title} data-testid={props.testid}>
           <div className="sheet-head">
             <h2 className="grow">{props.title}</h2>
-            <IconButton label="Close" onClick={props.onClose}><X /></IconButton>
+            <IconButton label={t("Close")} onClick={props.onClose}><X /></IconButton>
           </div>
           <div className="sheet-body">{props.children}</div>
           {props.foot && <div className="sheet-foot">{props.foot}</div>}
@@ -244,7 +245,7 @@ export function StampHost() {
               />
             )}
             <div className="stamp-actions">
-              <button type="button" className="btn flat" onClick={() => answer(false)} data-testid="stamp-cancel">Cancel</button>
+              <button type="button" className="btn flat" onClick={() => answer(false)} data-testid="stamp-cancel">{t("Cancel")}</button>
               <button type="submit" className={`btn ${request.destructive ? "destructive" : "primary"}`} autoFocus={!request.prompt} data-testid="stamp-confirm">{request.confirm}</button>
             </div>
           </form>
@@ -265,7 +266,7 @@ export function Notices() {
           {notice.action && (
             <button type="button" className="btn small flat" onClick={() => { notice.action!.run(); dismissNotice(notice.id); }}>{notice.action.label}</button>
           )}
-          <IconButton label="Dismiss" onClick={() => dismissNotice(notice.id)}><X /></IconButton>
+          <IconButton label={t("Dismiss")} onClick={() => dismissNotice(notice.id)}><X /></IconButton>
         </div>
       ))}
     </div>

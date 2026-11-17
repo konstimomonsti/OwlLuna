@@ -21,6 +21,7 @@ import { CropView } from "./CropView";
 import { clampStrip } from "./zoomStrip";
 import { clampZoom, goToPage, setTool, type Session } from "./session";
 import { capturePointer } from "../canvas/pointer";
+import { t } from "../i18n";
 
 const PAD = 28;
 const GAP = 22;
@@ -297,7 +298,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
       if (!page) return false;
       const width = Math.min(260, page.edgeless ? 260 : Math.max(page.size.w - at.x - 16, 80));
       const item: PageItem = { id: uuid(), kind: "text", string: "", fontSize: 17, x: at.x + width / 2, y: at.y + 14, w: width, h: 28, rotation: 0 };
-      doc.addItem(at.pageID, item, "Add Text");
+      doc.addItem(at.pageID, item, t("Add Text"));
       setTool(session, { kind: "lasso" });
       session.setState({ selectedItem: { pageID: at.pageID, itemID: item.id }, editingItem: item.id });
       return true;
@@ -352,10 +353,10 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     if (item.target.to === "web") void openURL(item.target.url);
     else if (item.target.to === "page") {
       if (doc.page(item.target.page)) goToPage(session, item.target.page);
-      else notify("That page is no longer in this notebook.", "trouble");
+      else notify(t("That page is no longer in this notebook."), "trouble");
     } else {
       void openNotebook(item.target.notebook, item.target.page).then((found) => {
-        if (!found) notify("That notebook is no longer in the library.", "trouble");
+        if (!found) notify(t("That notebook is no longer in the library."), "trouble");
       });
     }
   }, [doc, session]);
@@ -512,7 +513,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
               goToPage(session, added.id);
             }}
           >
-            <Plus /> Add Page
+            <Plus /> {t("Add Page")}
           </button>
         )}
       </div>
@@ -582,7 +583,7 @@ function RulerView(props: { ruler: { x: number; y: number; angle: number; pageID
       </div>
       <div
         onPointerDown={begin(true)} onPointerMove={move} onPointerUp={end} onPointerCancel={end}
-        title="Turn the ruler"
+        title={t("Turn the ruler")}
         style={{ position: "absolute", right: -6, top: "50%", width: 20, height: 20, marginTop: -10, borderRadius: 3, background: "var(--board)", border: "1.5px solid #1B2230", pointerEvents: "auto", cursor: "grab", touchAction: "none" }}
       />
     </div>
@@ -599,7 +600,7 @@ function StripMark(props: { strip: { x: number; y: number; w?: number; h?: numbe
       <div
         data-hot
         data-testid="zoom-strip-grip"
-        title="Drag the zoom window's strip"
+        title={t("Drag the zoom window's strip")}
         onPointerDown={(event) => {
           event.stopPropagation();
           capturePointer(event.currentTarget, event.pointerId);

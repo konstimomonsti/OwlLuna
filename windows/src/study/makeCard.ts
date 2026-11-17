@@ -12,6 +12,7 @@ import { ocrImage, recogniseInk, recognitionAvailable } from "../services/recogn
 import { addCardImage } from "./cardImages";
 import { addCard, cardForTape, ensureCards, requestEdit, updateCard } from "./cardStore";
 import { CLIP_SCALE, INK_MARGIN, padRect, pixelRect, tapeClips } from "./clip";
+import { t } from "../i18n";
 
 /** The part of a rendered page that holds `rect`, as PNG bytes. Null when the rectangle is off the page. */
 async function clipPNG(doc: NotebookDocument, page: Page, strokes: Stroke[], rect: Rect, options: { items: boolean; tapes: "none" | string }): Promise<Uint8Array | null> {
@@ -64,17 +65,17 @@ export async function cardFromTape(doc: NotebookDocument, pageID: string, tapeID
     const { back, front } = tapeClips(itemBounds(tape));
     const backPNG = await clipPNG(doc, page, strokes, back, { items: true, tapes: "none" });
     const frontPNG = await clipPNG(doc, page, strokes, front, { items: true, tapes: tapeID });
-    if (!backPNG || !frontPNG) throw new Error("The tape is not on the page.");
+    if (!backPNG || !frontPNG) throw new Error(t("The tape is not on the page."));
     const card = newCard(
       { text: "", image: await addCardImage(doc.fs, doc.id, frontPNG) },
       { text: "", image: await addCardImage(doc.fs, doc.id, backPNG) },
       { pageID, tapeID },
     );
     await addCard(doc.fs, doc.id, card);
-    notify("Card made from the tape.", "info", { label: "Open", run: () => requestEdit(doc.id, card.id) });
+    notify(t("Card made from the tape."), "info", { label: t("Open"), run: () => requestEdit(doc.id, card.id) });
     readWords(doc, card, "back", async () => (await ocrImage(backPNG, language())).text);
   } catch (error) {
-    notify(`The card couldn't be made: ${error instanceof Error ? error.message : String(error)}`, "trouble");
+    notify(t("The card couldn't be made: {error}", { error: error instanceof Error ? error.message : String(error) }), "trouble");
   }
 }
 
@@ -89,13 +90,13 @@ export async function cardFromInk(doc: NotebookDocument, pageID: string, strokeI
     const bounds = inkBounds(chosen);
     if (!bounds) return;
     const png = await clipPNG(doc, page, chosen, padRect(bounds, INK_MARGIN), { items: false, tapes: "none" });
-    if (!png) throw new Error("The writing is not on the page.");
+    if (!png) throw new Error(t("The writing is not on the page."));
     const front: CardSide = { text: "", image: await addCardImage(doc.fs, doc.id, png) };
     const card = newCard(front, { text: "" }, { pageID });
     await addCard(doc.fs, doc.id, card);
     requestEdit(doc.id, card.id);
     readWords(doc, card, "front", async () => (await recogniseInk(chosen, language())).text);
   } catch (error) {
-    notify(`The card couldn't be made: ${error instanceof Error ? error.message : String(error)}`, "trouble");
+    notify(t("The card couldn't be made: {error}", { error: error instanceof Error ? error.message : String(error) }), "trouble");
   }
 }

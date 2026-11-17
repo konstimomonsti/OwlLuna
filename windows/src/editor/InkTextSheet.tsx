@@ -11,6 +11,7 @@ import { placeText } from "./actions";
 import type { NotebookDocument } from "./document";
 import { placeBelow, placeOver } from "./inkText";
 import { setTool, type Session } from "./session";
+import { t } from "../i18n";
 
 export function InkTextSheet(props: { doc: NotebookDocument; session: Session; pageID: string; strokes: Stroke[]; onClose: () => void }) {
   const { doc, session, pageID, strokes } = props;
@@ -42,7 +43,7 @@ export function InkTextSheet(props: { doc: NotebookDocument; session: Session; p
   const usable = status === "ready" && text.trim() !== "" && page !== undefined && bounds !== null;
 
   const copy = () => {
-    void navigator.clipboard.writeText(text).then(() => notify("Copied."), () => notify("That couldn't be copied.", "trouble"));
+    void navigator.clipboard.writeText(text).then(() => notify(t("Copied.")), () => notify(t("That couldn't be copied."), "trouble"));
   };
 
   const place = () => {
@@ -58,7 +59,7 @@ export function InkTextSheet(props: { doc: NotebookDocument; session: Session; p
     const item: PageItem = { id: uuid(), kind: "text", string: text, fontSize: 17, x: box.x, y: box.y, w: box.w, h: box.h, rotation: 0 };
     const gone = new Set(strokes.map((stroke) => stroke.id));
     // One step, so a single undo brings the handwriting back and takes the text away.
-    doc.transact("Replace Handwriting", (draft) => {
+    doc.transact(t("Replace Handwriting"), (draft) => {
       draft.setInk(pageID, draft.ink(pageID).filter((stroke) => !gone.has(stroke.id)));
       draft.manifest.pages.find((candidate) => candidate.id === pageID)?.items.push(item);
     });
@@ -69,28 +70,28 @@ export function InkTextSheet(props: { doc: NotebookDocument; session: Session; p
 
   return (
     <Sheet
-      title="Handwriting to Text"
+      title={t("Handwriting to Text")}
       testid="ink-text-sheet"
       onClose={props.onClose}
       foot={
         <>
-          <button type="button" className="btn flat" onClick={props.onClose} data-testid="ink-text-cancel">Cancel</button>
-          <button type="button" className="btn" disabled={!usable} onClick={copy} data-testid="ink-text-copy">Copy</button>
-          <button type="button" className="btn" disabled={!usable} onClick={place} data-testid="ink-text-place">Place on Page</button>
-          <button type="button" className="btn primary" disabled={!usable} onClick={replace} data-testid="ink-text-replace">Replace Handwriting</button>
+          <button type="button" className="btn flat" onClick={props.onClose} data-testid="ink-text-cancel">{t("Cancel")}</button>
+          <button type="button" className="btn" disabled={!usable} onClick={copy} data-testid="ink-text-copy">{t("Copy")}</button>
+          <button type="button" className="btn" disabled={!usable} onClick={place} data-testid="ink-text-place">{t("Place on Page")}</button>
+          <button type="button" className="btn primary" disabled={!usable} onClick={replace} data-testid="ink-text-replace">{t("Replace Handwriting")}</button>
         </>
       }
     >
       {status === "reading" && (
         <div className="column" data-testid="ink-text-reading">
-          <span className="secondary">Reading the handwriting…</span>
-          <Thread value={0.35} label="Reading" />
+          <span className="secondary">{t("Reading the handwriting…")}</span>
+          <Thread value={0.35} label={t("Reading")} />
         </div>
       )}
       {status === "failed" && <p className="field-error" role="alert" data-testid="ink-text-error">{problem}</p>}
       {status === "ready" && (
         <>
-          {text.trim() === "" && <p className="secondary" data-testid="ink-text-nothing">Nothing was recognised. You can type the words yourself.</p>}
+          {text.trim() === "" && <p className="secondary" data-testid="ink-text-nothing">{t("Nothing was recognised. You can type the words yourself.")}</p>}
           <textarea className="field" style={{ minHeight: 140 }} value={text} onChange={(event) => setText(event.target.value)} autoFocus data-testid="ink-text-field" />
         </>
       )}

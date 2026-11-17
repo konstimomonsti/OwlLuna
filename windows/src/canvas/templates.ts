@@ -3,6 +3,7 @@
 
 import { isDarkPaper, type PaperColor, type PaperTemplate } from "../model/paper";
 import type { Rect } from "../model/ink";
+import { locale as activeLocale, t } from "../i18n";
 
 export type RGBA = [number, number, number, number];
 
@@ -105,12 +106,12 @@ export interface TemplateLabels {
 }
 
 /** The day planner's hours, 7 to 21, and the week planner's days with a box for notes. */
-export function templateLabels(locale?: string): TemplateLabels {
+export function templateLabels(locale: string = activeLocale()): TemplateLabels {
   const hours = Array.from({ length: 15 }, (_, index) =>
     new Date(2024, 0, 1, 7 + index).toLocaleTimeString(locale, { hour: "numeric" }).replace(/ /g, " "));
   // 1 January 2024 was a Monday.
   const days = Array.from({ length: 7 }, (_, index) => new Date(2024, 0, 1 + index).toLocaleDateString(locale, { weekday: "long" }));
-  return { hours, days: [...days, "Notes"] };
+  return { hours, days: [...days, t("Notes")] };
 }
 
 export function templateOps(template: PaperTemplate, color: PaperColor, size: { w: number; h: number }, labels: TemplateLabels = templateLabels()): TemplateOp[] {
