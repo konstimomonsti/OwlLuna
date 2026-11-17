@@ -16,7 +16,7 @@ const MAX_PIXELS = 4096 * 4096;
 export { pageRegion };
 export async function renderPageToCanvas(
   fs: FS, notebookID: string, page: Page, strokes: Stroke[], scale: number,
-  options: { items?: boolean; background?: boolean; manifest?: Pick<Manifest, "pages"> } = {},
+  options: { items?: boolean; background?: boolean; manifest?: Pick<Manifest, "pages">; /** Study tape to leave off the page. */ lifted?: Set<string> } = {},
 ): Promise<HTMLCanvasElement> {
   const region = pageRegion(page, strokes);
   const fit = Math.min(scale, Math.sqrt(MAX_PIXELS / Math.max(region.w * region.h, 1)));
@@ -35,7 +35,7 @@ export async function renderPageToCanvas(
   if (options.background !== false) drawMarks(ctx, page);
   if (withItems) await drawItems(ctx, fs, notebookID, page, "under", undefined, options.manifest);
   drawStrokes(ctx, strokes, { darkPaper: pageIsDark(page), layer: "all", visible: region });
-  if (withItems) await drawItems(ctx, fs, notebookID, page, "over", undefined, options.manifest);
+  if (withItems) await drawItems(ctx, fs, notebookID, page, "over", options.lifted, options.manifest);
   return canvas;
 }
 

@@ -98,7 +98,8 @@ export async function saveCards(fs: FS, id: string, cards: Flashcard[]): Promise
 /** The words recognised on each page, by page ID: handwriting, PDF text and scans. A cache, rebuilt when it is missing. */
 export interface PageWords {
   version: 1;
-  pages: Record<string, { key: string; text: string }>;
+  /** `scan` is the printed text read from a scanned page, kept apart so reading handwriting later does not lose it. */
+  pages: Record<string, { key: string; text: string; scan?: string }>;
 }
 
 export async function loadWords(fs: FS, id: string): Promise<PageWords> {

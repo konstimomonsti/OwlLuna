@@ -7,6 +7,7 @@ import { notify } from "../state/app";
 import { addAsset } from "../storage/package";
 import { heldClipping, placed, readClipping, type Clipping } from "./clipboard";
 import type { NotebookDocument } from "./document";
+import { textBoxSize } from "./inkText";
 import { setTool, type Session } from "./session";
 
 const pictureTypes: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" };
@@ -62,10 +63,7 @@ export function placeLink(doc: NotebookDocument, session: Session, target: LinkT
 }
 
 export function placeText(doc: NotebookDocument, session: Session, text: string, at: PagePoint, edit = false): PageItem {
-  const lines = text.split("\n");
-  const longest = Math.max(...lines.map((line) => line.length), 8);
-  const w = Math.min(Math.max(longest * 8.5, 120), 420);
-  const h = Math.max(lines.length, 1) * 17 * 1.35 + 4;
+  const { w, h } = textBoxSize(text);
   const item: PageItem = { id: uuid(), kind: "text", string: text, fontSize: 17, x: at.x, y: at.y, w, h, rotation: 0 };
   doc.addItem(at.pageID, item, "Add Text");
   pick(session, at.pageID, item.id);

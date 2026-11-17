@@ -9,10 +9,17 @@ import { PageSurface, visiblePart } from "./pageSurface";
 
 const canvasStyle = { position: "absolute", pointerEvents: "none" } as const;
 
-/** The ink as it stood at a moment: strokes begun later are left out, and the one being written is cut short. */
-export function inkUntil(strokes: Stroke[], until: number): Stroke[] {
+/**
+ * The ink as it stood at a moment: strokes begun later are left out, and the one being written is cut short.
+ * Strokes begun before `from` (the start of a recording that is replaying) were already there, so they always show.
+ */
+export function inkUntil(strokes: Stroke[], until: number, from?: number | null): Stroke[] {
   const out: Stroke[] = [];
   for (const stroke of strokes) {
+    if (from !== null && from !== undefined && stroke.at < from) {
+      out.push(stroke);
+      continue;
+    }
     if (stroke.at > until) continue;
     const last = stroke.pts.length >= STRIDE ? stroke.pts[stroke.pts.length - 1] : 0;
     if (stroke.at + last <= until) {
@@ -38,6 +45,8 @@ export interface PageViewProps {
   register?: (pageID: string, surface: PageSurface | null) => void;
   /** Shows the ink only up to this moment. */
   until?: number | null;
+  /** With `until`: ink begun before this moment is shown whole. */
+  from?: number | null;
   under?: ReactNode;
   over?: ReactNode;
   top_?: ReactNode;
@@ -75,8 +84,8 @@ export const PageView = memo(function PageView(props: PageViewProps) {
 
   useEffect(() => {
     const until = props.until;
-    surface.current?.setOverride(until === null || until === undefined ? null : inkUntil(doc.ink(page.id), until));
-  }, [props.until, props.inkVersion]);
+    surface.current?.setOverride(until === null || until === undefined ? null : inkUntil(doc.ink(page.id), until, props.from));
+  }, [props.until, props.from, props.inkVersion]);
 
   const edgeless = page.edgeless === true;
   return (

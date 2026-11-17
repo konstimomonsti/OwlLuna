@@ -59,6 +59,8 @@ export interface EditorCanvasProps {
   itemBar?: (pageID: string, item: PageItem) => ReactNode;
   /** More to draw on a page, under the ink: a PDF's selectable text. */
   pageExtras?: (page: Page, zoom: number) => ReactNode;
+  /** Offered every tap that made no mark, before the tools see it: while a recording replays, a tap on its ink seeks. True if it was taken. */
+  onInkTap?: (at: PagePoint) => boolean;
 }
 
 export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(function EditorCanvas(props, ref) {
@@ -276,6 +278,10 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     return tape ?? [...page.items].reverse().find((item) => item.kind !== "tape" && itemContains(item, at, pad)) ?? null;
   }, [doc]);
 
+  // The controller outlives renders, so it reads the latest handler through a ref.
+  const inkTap = useRef(props.onInkTap);
+  inkTap.current = props.onInkTap;
+
   const controller = useMemo(() => new InkController({
     doc, session,
     settings: () => useApp.getState().settings,
@@ -285,6 +291,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     setOverlay,
     panBy, zoomAt,
     tap: (at) => {
+      if (inkTap.current?.(at)) return true;
       if (session.getState().tool.kind !== "text") return false;
       const page = doc.page(at.pageID);
       if (!page) return false;
@@ -481,6 +488,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
             viewport={{ x: scroll.x - rect.left, y: scroll.y - rect.top, w: size.w, h: size.h }}
             register={register}
             until={state.replayUntil}
+            from={state.replayFrom}
             inkVersion={doc.inkVersion(rect.page.id)}
             under={
               <>

@@ -2,6 +2,7 @@
 
 import { notify, openNotebook, registerManifest, useApp } from "../state/app";
 import { pickFiles } from "../platform/host";
+import { readScannedPage } from "../services/scan";
 import { appendPdf, appendPictures, importPdf, importPictures, isPdfName, isPictureName, titleOfFile, type PickedFileLike } from "../services/pdfImport";
 
 const PDFS = [{ name: "PDF", extensions: ["pdf"] }];
@@ -95,6 +96,8 @@ export async function addPicturePageTo(doc: Parameters<typeof appendPictures>[0]
   if (!files.length) return null;
   try {
     const pages = await appendPictures(doc, files, afterPageID);
+    // Printed words are read afterwards, best effort, so search finds them.
+    if (pages.length === files.length) pages.forEach((page, index) => void readScannedPage(doc, page, files[index].data));
     return pages[0]?.id ?? null;
   } catch (error) {
     notify(message(error), "trouble");

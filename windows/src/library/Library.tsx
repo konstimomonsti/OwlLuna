@@ -26,6 +26,7 @@ import { importDropped, pickAndImportPdf, pickAndImportPictures } from "../edito
 import { Cover } from "./Cover";
 import { beginDrag, dragged, endDrag } from "./drag";
 import { Glance } from "./Glance";
+import { StudyCard } from "../study/StudyCard";
 import { SearchResults } from "./SearchResults";
 import { daysLeft, folderTree, inScope, scopeTitle, sortNames, sortNotebooks, type SortKey } from "./shelf";
 import { Sidebar } from "./Sidebar";
@@ -254,6 +255,7 @@ export function Library() {
                 </section>
               )}
 
+              {scope.kind === "all" && !selecting && <StudyCard />}
               {scope.kind === "all" && !selecting && <Glance />}
 
               {subfolders.length > 0 && (

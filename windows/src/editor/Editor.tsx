@@ -2,7 +2,7 @@
 
 import {
   Bookmark, BookmarkCheck, ChevronLeft, Columns2, Ellipsis, FileDown, Focus, Hand, LayoutGrid, Maximize, Mic, MonitorPlay, PenLine, Plus, Redo2, ScrollText,
-  Search, StickyNote, Undo2, X, ZoomIn, ListTree, Layers, FileText, Image as ImageIcon, Link2, Type, Tally1, FilePlus2, GalleryVertical, GalleryHorizontal, House, Maximize2, Palette, TextSelect, FileInput, ImagePlus,
+  Search, StickyNote, Undo2, X, ZoomIn, ListTree, Layers, FileText, Image as ImageIcon, Link2, Type, Tally1, FilePlus2, GalleryVertical, GalleryHorizontal, House, Maximize2, Palette, TextSelect, FileInput, ImagePlus, Camera, Eye, EyeOff,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useStore } from "zustand";
@@ -21,7 +21,22 @@ import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
 import { ExportSheet } from "./ExportSheet";
 import { addPdfPagesTo, addPicturePageTo } from "./importFiles";
 import { PdfTextLayer } from "../canvas/PdfTextLayer";
-import { refreshWords } from "../services/words";
+import { refreshSearchableWords } from "../services/handwriting";
+import { readPictureText } from "../services/scan";
+import { stopRecordingOf } from "../services/recording";
+import { cardFromInk, cardFromTape } from "../study/makeCard";
+import { flushCards, useCards } from "../study/cardStore";
+import { DeckSheet } from "../study/DeckSheet";
+import { InkTextSheet } from "./InkTextSheet";
+import { strokesToRead } from "./inkText";
+import { RecorderControl } from "./Recorder";
+import { RecordingsPanel, ReplayBar, type ReplayHandle } from "./Replay";
+import { seekTarget, strokeAtPoint } from "./replayMath";
+import { Presenter } from "./Presenter";
+import { ScanSheet } from "./ScanSheet";
+import type { PagePoint } from "../canvas/inkController";
+import type { Stroke } from "../model/ink";
+import type { Recording } from "../model/notebook";
 import { FindPanel } from "./FindPanel";
 import { LinkSheet } from "./LinkSheet";
 import { Navigator } from "./Navigator";
@@ -51,6 +66,13 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
   const [renaming, setRenaming] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [linkSheet, setLinkSheet] = useState<{ editing: { pageID: string; item: LinkItem } | null } | null>(null);
+  /** The page the presenter starts on, while presenting. */
+  const [presenting, setPresenting] = useState<string | null>(null);
+  const [replaying, setReplaying] = useState<Recording | null>(null);
+  const replay = useRef<ReplayHandle>(null);
+  const [inkText, setInkText] = useState<{ pageID: string; strokes: Stroke[] } | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const cardEdit = useCards((cards) => cards.edit);
 
   const pages = doc.manifest.pages;
   const index = Math.max(doc.pageIndex(state.currentPage), 0);
@@ -77,7 +99,9 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
     let offset = 0;
     for (const file of files) {
       const at = centre();
-      await placePicture(doc, session, file.data, extensionOf(file.name) || "png", { ...at, x: at.x + offset, y: at.y + offset });
+      const placed = await placePicture(doc, session, file.data, extensionOf(file.name) || "png", { ...at, x: at.x + offset, y: at.y + offset });
+      // The words in the picture are read afterwards, so search finds them.
+      if (placed) void readPictureText(doc, at.pageID, placed.id, file.data);
       offset += 18;
     }
   }, [doc, session, centre]);
@@ -87,6 +111,42 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
     if (next) goToPage(session, next.id);
   }, [doc, pages, session]);
 
+  const startPresenting = useCallback(() => setPresenting(session.getState().currentPage), [session]);
+
+  const openInkText = useCallback(() => {
+    const now = session.getState();
+    const found = strokesToRead((id) => doc.ink(id), now.selection, now.currentPage);
+    if (found.strokes.length === 0) {
+      notify("Write or select some handwriting first.");
+      return;
+    }
+    setInkText(found);
+  }, [doc, session]);
+
+  const makeInkCard = useCallback(() => {
+    const selection = session.getState().selection;
+    if (selection) void cardFromInk(doc, selection.pageID, selection.ids);
+  }, [doc, session]);
+
+  // Study tape: all of it up, or all of it down, across the notebook.
+  const setAllTape = useCallback((lift: boolean) => {
+    const ids = doc.manifest.pages.flatMap((target) => target.items.filter((item) => item.kind === "tape").map((item) => item.id));
+    session.setState({ liftedTapes: lift ? ids : [] });
+  }, [doc, session]);
+
+  // While a recording replays, a tap on ink written during it moves the audio there.
+  const onInkTap = useCallback((at: PagePoint): boolean => {
+    const handle = replay.current;
+    if (!handle) return false;
+    const until = session.getState().replayUntil;
+    const shown = doc.ink(at.pageID).filter((stroke) => until === null || stroke.at <= until);
+    const stroke = strokeAtPoint(shown, at, 8 / session.getState().zoom, handle.recording);
+    const target = stroke ? seekTarget(stroke, handle.recording) : null;
+    if (target === null) return false;
+    handle.seek(target);
+    return true;
+  }, [doc, session]);
+
   const toggleBookmark = useCallback(() => {
     const target = doc.page(session.getState().currentPage);
     if (target) doc.updatePage(target.id, target.bookmark ? "Remove Bookmark" : "Bookmark", (draft) => { if (draft.bookmark) delete draft.bookmark; else draft.bookmark = true; });
@@ -95,7 +155,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
   // Keyboard
 
   useEffect(() => {
-    if (!props.active) return;
+    if (!props.active || presenting) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (document.querySelector(".scrim")) return;
       const controller = canvas.current?.controller;
@@ -127,6 +187,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
       if (mod && event.shiftKey && key === "f") { session.setState((s) => ({ focus: !s.focus })); return done(); }
       if (mod && !event.shiftKey && key === "f") { session.setState({ panel: "find" }); return done(); }
       if (mod && key === "b") { toggleBookmark(); return done(); }
+      if (mod && event.altKey && key === "enter") { startPresenting(); return done(); }
       if (mod && key === "enter" && !event.altKey) { const added = doc.addPage(session.getState().currentPage); goToPage(session, added.id); return done(); }
       if (mod) return;
       if (key === "delete" || key === "backspace") { if (deleteSelection(doc, session)) done(); return; }
@@ -169,15 +230,26 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("paste", onPaste);
     };
-  }, [props.active, doc, session, pens, page, board, settings.pageFlow, turn, toggleBookmark, centre, readAsset, viewSize]);
+  }, [props.active, presenting, startPresenting, doc, session, pens, page, board, settings.pageFlow, turn, toggleBookmark, centre, readAsset, viewSize]);
 
   // PDF text is read into the words cache once the writing has paused, and when the notebook is left.
   const version = doc.getVersion();
   useEffect(() => {
-    const timer = setTimeout(() => void refreshWords(doc).catch(() => {}), 4000);
+    const timer = setTimeout(() => void refreshSearchableWords(doc), 4000);
     return () => clearTimeout(timer);
   }, [doc, version]);
-  useEffect(() => () => void refreshWords(doc).catch(() => {}), [doc]);
+  useEffect(() => () => void refreshSearchableWords(doc), [doc]);
+
+  // Leaving the editor writes what the notebook's flashcards are waiting to save, and ends a recording that is still running.
+  useEffect(() => () => {
+    void flushCards(doc.id).catch(() => {});
+    void stopRecordingOf(doc);
+  }, [doc]);
+
+  // A card made from tape or ink is opened for editing in the deck.
+  useEffect(() => {
+    if (cardEdit && cardEdit.notebook === doc.id) session.setState({ panel: "cards" });
+  }, [cardEdit, doc.id, session]);
 
   const toggleZoomWindow = useCallback(() => {
     if (session.getState().zoomWindow) return session.setState({ zoomWindow: null });
@@ -187,6 +259,18 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
 
   const others = tabs.filter((id) => id !== doc.id);
   const close = () => setMenu(null);
+
+  // Presenting replaces the editor; Done comes back to the page that was on show.
+  if (presenting !== null) {
+    return (
+      <Presenter
+        doc={doc}
+        startPage={presenting}
+        pen={state.tool.kind === "pen" ? state.tool : state.previousTool.kind === "pen" ? state.previousTool : null}
+        onDone={(pageID) => { goToPage(session, pageID); setPresenting(null); }}
+      />
+    );
+  }
 
   return (
     <div className={`editor${state.focus ? " focus" : ""}${state.zoomWindow ? " zoomed" : ""}`} data-testid="editor" data-notebook={doc.id}>
@@ -245,6 +329,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           <IconButton label={page.bookmark ? "Remove Bookmark (Ctrl+B)" : "Bookmark This Page (Ctrl+B)"} on={page.bookmark === true} onClick={toggleBookmark} testid="bookmark">
             {page.bookmark ? <BookmarkCheck /> : <Bookmark />}
           </IconButton>
+          <RecorderControl doc={doc} />
           <IconButton label="Add" onClick={(event) => setMenu({ kind: "add", anchor: anchorBelow(event.currentTarget, "end") })} testid="add-menu"><Plus /></IconButton>
           <IconButton label="More" onClick={(event) => setMenu({ kind: "more", anchor: anchorBelow(event.currentTarget, "end") })} testid="more-menu"><Ellipsis /></IconButton>
           {props.secondary && <IconButton label="Close Side by Side" onClick={() => setSplit(null)}><X /></IconButton>}
@@ -260,12 +345,16 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           pageExtras={(target, zoom) => (target.background.kind === "pdf" ? <PdfTextLayer doc={doc} page={target} zoom={zoom} selecting={state.textSelect} /> : null)}
           doc={doc}
           session={session}
-          selectionBar={(bounds) => <InkBar doc={doc} session={session} bounds={bounds} onToText={() => notify("Handwriting to Text arrives with the Windows services.")} onMakeCard={() => notify("Flashcards arrive with the study tools.")} />}
-          itemBar={(pageID, item) => <ItemBar doc={doc} session={session} pageID={pageID} item={item} onCrop={() => session.setState({ croppingItem: item.id })} onEditLink={() => { if (item.kind === "link") setLinkSheet({ editing: { pageID, item } }); }} onMakeCard={() => {}} />}
+          onInkTap={onInkTap}
+          selectionBar={(bounds) => <InkBar doc={doc} session={session} bounds={bounds} onToText={openInkText} onMakeCard={makeInkCard} />}
+          itemBar={(pageID, item) => <ItemBar doc={doc} session={session} pageID={pageID} item={item} onCrop={() => session.setState({ croppingItem: item.id })} onEditLink={() => { if (item.kind === "link") setLinkSheet({ editing: { pageID, item } }); }} onMakeCard={() => void cardFromTape(doc, pageID, item.id)} />}
         />
         {board && !state.focus && <BoardControls doc={doc} session={session} canvas={canvas} />}
         {state.panel === "paper" && !board && !state.focus && <PaperDrawer doc={doc} session={session} version={doc.getVersion()} />}
         {state.panel === "outline" && !state.focus && <Outline doc={doc} session={session} version={doc.getVersion()} />}
+        {state.panel === "recordings" && !state.focus && (
+          <RecordingsPanel doc={doc} session={session} version={doc.getVersion()} playing={replaying?.id ?? null} onPlay={setReplaying} onStop={() => setReplaying(null)} />
+        )}
         {state.focus && (
           <div className="focus-exit">
             <IconButton label="Leave Focus (Esc)" onClick={() => session.setState({ focus: false })} testid="leave-focus"><X /></IconButton>
@@ -283,9 +372,11 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           addLink: () => setLinkSheet({ editing: null }),
           toggleRuler: () => session.setState((s) => ({ ruler: s.ruler ? null : { pageID: s.currentPage, ...rulerStart(centre()), angle: 0 } })),
           toggleZoomWindow,
-          inkToText: () => notify("Handwriting to Text arrives with the Windows services."),
+          inkToText: openInkText,
         }}
       />
+
+      {replaying && <ReplayBar key={replaying.id} ref={replay} doc={doc} session={session} recording={replaying} onClose={() => setReplaying(null)} />}
 
       {menu?.kind === "zoom" && (
         <Menu anchor={menu.anchor} title="Zoom" onClose={close}>
@@ -341,6 +432,7 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           <MenuRow icon={<ImageIcon />} onClick={() => { close(); void addPicture(); }}>Picture…</MenuRow>
           {!board && <MenuRow icon={<FileInput />} onClick={() => { close(); void addPdfPagesTo(doc, page.id).then((first) => { if (first) goToPage(session, first); }); }} testid="add-pdf-pages">Pages from PDF…</MenuRow>}
           {!board && <MenuRow icon={<ImagePlus />} onClick={() => { close(); void addPicturePageTo(doc, page.id).then((first) => { if (first) goToPage(session, first); }); }} testid="add-picture-page">Picture as Page…</MenuRow>}
+          {!board && <MenuRow icon={<Camera />} onClick={() => { close(); setScanning(true); }} testid="add-scan">Scan from Camera…</MenuRow>}
           <MenuRow icon={<Type />} onClick={() => { setTool(session, { kind: "text" }); close(); }}>Text Box</MenuRow>
           <MenuRow icon={<StickyNote />} onClick={() => setMenu({ kind: "stickers", anchor: menu.anchor })}>Sticker</MenuRow>
           <MenuRow icon={<Link2 />} onClick={() => { close(); setLinkSheet({ editing: null }); }} testid="add-link-row">Link…</MenuRow>
@@ -373,7 +465,9 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
           <MenuRow icon={<ZoomIn />} chosen={state.zoomWindow !== null} onClick={() => { toggleZoomWindow(); close(); }} testid="more-zoom-window">Zoom Window</MenuRow>
           <MenuRow icon={<Layers />} onClick={() => { session.setState({ panel: "cards" }); close(); }}>Flashcards</MenuRow>
           <MenuRow icon={<Mic />} onClick={() => { session.setState({ panel: "recordings" }); close(); }}>Recordings</MenuRow>
-          <MenuRow icon={<MonitorPlay />} keys="Ctrl+Alt+Enter" onClick={() => { close(); notify("Presenting arrives with a later step."); }}>Present</MenuRow>
+          <MenuRow icon={<MonitorPlay />} keys="Ctrl+Alt+Enter" onClick={() => { close(); startPresenting(); }} testid="more-present">Present</MenuRow>
+          <MenuRow icon={<Eye />} onClick={() => { setAllTape(true); close(); }} testid="lift-all-tape">Lift All Tape</MenuRow>
+          <MenuRow icon={<EyeOff />} onClick={() => { setAllTape(false); close(); }} testid="cover-all-tape">Cover All Tape</MenuRow>
           <MenuRow icon={<FileDown />} onClick={() => { close(); setExporting(true); }} testid="more-export">Export…</MenuRow>
           <MenuBreak />
           <MenuRow icon={<PenLine />} chosen={settings.drawWith === "pen"} onClick={() => { updateSettings({ drawWith: "pen" }); close(); }}>Draw With Pen Only</MenuRow>
@@ -390,6 +484,9 @@ export function Editor(props: { doc: NotebookDocument; active: boolean; secondar
         </Menu>
       )}
       {exporting && <ExportSheet doc={doc} session={session} onClose={() => setExporting(false)} />}
+      {state.panel === "cards" && <DeckSheet doc={doc} session={session} onClose={() => session.setState({ panel: null })} />}
+      {inkText && <InkTextSheet doc={doc} session={session} pageID={inkText.pageID} strokes={inkText.strokes} onClose={() => setInkText(null)} />}
+      {scanning && <ScanSheet doc={doc} session={session} afterPage={page.id} onClose={() => setScanning(false)} />}
       {linkSheet && (
         <LinkSheet
           doc={doc}

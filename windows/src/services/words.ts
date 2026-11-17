@@ -89,7 +89,8 @@ export async function refreshWords(source: WordsSource, recognise?: Recogniser, 
     if (recognise && ink?.length) {
       try { handwriting = await recognise(ink); } catch { handwriting = ""; }
     }
-    words[page.id] = { key: wordsKey(page, signatures[page.id] ?? ""), text: mergeWordText(pdf, handwriting) };
+    const scan = loaded.pages[page.id]?.scan;
+    words[page.id] = { key: wordsKey(page, signatures[page.id] ?? ""), text: mergeWordText(pdf, handwriting, scan), ...(scan ? { scan } : {}) };
     changed = true;
     onProgress?.(++done, stale.length);
   }
