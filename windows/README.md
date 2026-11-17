@@ -33,6 +33,17 @@ Requirements: Windows 10 (1809) or Windows 11, x64. The WebView2 runtime that Wi
 - Import PDFs and pictures as notebooks or as pages; select, copy and highlight PDF text; a highlighter that snaps to a line of text.
 - Export as PDF (vector ink, working links, the original PDF pages kept vector), PNG, plain text, Markdown, or a page as a time-lapse video.
 
+### Bringing in OneNote
+**New › Import from OneNote…** reads your notebooks straight from OneNote for Microsoft 365 or OneNote 2016, read-only: nothing in OneNote is changed, and no sign-in is needed.
+- Each OneNote notebook becomes a folder, section groups become folders inside it, and each section becomes a notebook with its pages in order.
+- Handwriting comes through as editable ink with its colours and widths, typed text as text boxes, pictures and printouts as pictures. Very tall pages of stacked printouts are split into pages.
+- A page holding something that can't be converted (an attached file, an equation) also gets a PDF copy of the page as OneNote shows it, right after it, so nothing is lost. Or choose **Exact copy** to bring every page in as a PDF page.
+- Importing again adds new pages and updates changed ones without duplicating anything; a page you've changed in OwlLuna is never overwritten, and OneNote's newer version is added beside it.
+- Notebooks in `Documents\OneNote Notebooks` that aren't open in OneNote are listed, with a button to open them in OneNote and include them.
+- Password-protected sections are skipped and named. Big notebooks take a while: OneNote can take several seconds to hand over a page full of ink.
+
+The OneNote app from the Microsoft Store has no import interface. Without OneNote for Microsoft 365 or 2016, export from OneNote as PDF and use **Import PDF…**.
+
 ### Library
 - Cloth, Print and first-page covers; nested folders, tags, smart shelves, favourites, sorting and a list view.
 - A daily journal with Today's Page (Ctrl+T) and On This Day; Quick Note (Ctrl+Shift+N); a This Week strip and a writing calendar, with no streaks or badges.
@@ -41,6 +52,7 @@ Requirements: Windows 10 (1809) or Windows 11, x64. The WebView2 runtime that Wi
 - Locked notebooks, opened with Windows Hello or a PIN. A lock hides a notebook in the app; it does not encrypt its files.
 - Backup of the whole library, or one notebook, to a single `.owlbackup` file. Restoring never overwrites: a notebook that differs comes back as a second copy.
 - Light, Dark or the system appearance, and a left-handed layout.
+- English, Spanish, French and German. Many translations come from the iPad app's own catalogue; like those, they haven't been checked by native speakers yet.
 
 ### Windows in place of Apple
 | iPad | Windows |
